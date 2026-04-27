@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 
 import {
   Modal,
@@ -22,12 +22,18 @@ export const forgotPasswordSchema = z.object({
 });
 
 interface ForgotPassowrdDialogProps {
-  trigger: React.ReactNode;
+  onSuccessCallback: () => void;
+  trigger?: React.ReactNode;
+  open: boolean;
+  setOpen: (value: boolean) => void;
 }
 
-const ForgotPasswordDialog: React.FC<ForgotPassowrdDialogProps> = () => {
-  const [open, setOpen] = useState<boolean>(false);
-
+const ForgotPasswordDialog: React.FC<ForgotPassowrdDialogProps> = ({
+  trigger,
+  open,
+  setOpen,
+  onSuccessCallback,
+}) => {
   const {
     control,
     handleSubmit,
@@ -42,9 +48,11 @@ const ForgotPasswordDialog: React.FC<ForgotPassowrdDialogProps> = () => {
   };
   return (
     <>
-      <Button onPress={() => setOpen(true)}>
-        <ButtonText>Open Modal</ButtonText>
-      </Button>
+      {trigger || (
+        <Button onPress={() => setOpen(true)}>
+          <ButtonText>Open Modal</ButtonText>
+        </Button>
+      )}
       <Modal
         isOpen={open}
         onClose={() => {
@@ -76,6 +84,7 @@ const ForgotPasswordDialog: React.FC<ForgotPassowrdDialogProps> = () => {
             </Button>
             <Button
               onPress={() => {
+                handleSubmit(onSuccessCallback);
                 setOpen(false);
               }}
             >
