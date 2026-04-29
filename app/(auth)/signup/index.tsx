@@ -41,7 +41,7 @@ export default function SignUp() {
     try {
       startLoading()
       await signUpEmail(email, password, name.trim());
-      router.replace("/(auth)/termos");
+      router.replace("/(auth)/terms");
     } catch (error) {
       const { title, message } = getAuthAlertData(error, "Erro no cadastro");
       Alert.alert(title, message);
