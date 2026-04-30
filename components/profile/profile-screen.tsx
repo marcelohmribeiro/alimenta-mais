@@ -23,6 +23,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -287,6 +288,8 @@ const ProfileScreen = () => {
       const message =
         errorCode === "storage/unauthorized"
           ? "O Storage bloqueou a gravação da foto para este usuário."
+          : Platform.OS === "web"
+            ? "No navegador, o upload da foto foi bloqueado pelo Firebase Storage. Falta liberar CORS do bucket para http://localhost:8083."
           : "Não foi possível atualizar a foto do perfil.";
 
       Alert.alert("Erro", message);
