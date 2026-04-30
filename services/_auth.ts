@@ -1,4 +1,5 @@
-import { getRequiredAuth } from "@/services/_firebase";
+import { db, getRequiredAuth } from "@/services/_firebase";
+import { doc, setDoc } from "firebase/firestore";
 import {
 	createUserWithEmailAndPassword,
 	GoogleAuthProvider,
@@ -161,6 +162,23 @@ export const signUpEmail = async (email: string, password: string, name: string)
 		);
 		const parsed = await createUserWithEmailAndPassword(auth, email.trim(), password);
 		await updateProfile(parsed.user, { displayName: name });
+
+		if (db) {
+			await setDoc(
+				doc(db, "users", parsed.user.uid),
+				{
+					nome: name,
+					email: parsed.user.email ?? email.trim(),
+					telefone: "",
+					fotoPerfil: "",
+					tipoUsuario: "Receptor",
+				},
+				{ merge: true },
+			).catch((firestoreError) => {
+				console.error("Erro ao criar perfil inicial no Firestore:", firestoreError);
+			});
+		}
+
 		return parsed.user;
 	} catch (error) {
 		console.error("Erro ao criar usuario:", error);
