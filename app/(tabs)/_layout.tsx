@@ -6,6 +6,7 @@ export default function TabLayout() {
   const { user, initializing } = useAuth();
 
   if (initializing) return null;
+
   if (!user) return <Redirect href="/(auth)/login" />;
 
   return (
@@ -50,6 +51,7 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="buscar/index"
         options={{
@@ -59,15 +61,21 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="doar/index"
         options={{
           title: "Doar",
           tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons size={22} name="heart-outline" color={color} />
+            <MaterialCommunityIcons
+              size={22}
+              name="heart-outline"
+              color={color}
+            />
           ),
         }}
       />
+
       <Tabs.Screen
         name="conversas/index"
         options={{
@@ -81,6 +89,7 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="perfil/index"
         options={{
@@ -94,11 +103,26 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="become-donor/index"
         options={{
           href: null,
           title: "Tornar-se Doador",
+        }}
+      />
+
+      <Tabs.Screen
+        name="doacoes"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="cadastrardoacoes"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
