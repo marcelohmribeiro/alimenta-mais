@@ -193,8 +193,6 @@ export default function Login() {
                 </Pressable>
               </View>
               <ForgotPasswordDialog
-                open={openForgotPass}
-                setOpen={setOpenForgotPass}
                 onSuccessCallback={handlePasswordReset}
                 trigger={
                   <Pressable
