@@ -193,30 +193,8 @@ export default function Login() {
                 </Pressable>
               </View>
               <ForgotPasswordDialog
-                open={openForgotPass}
-                setOpen={setOpenForgotPass}
+                loading={loading}
                 onSuccessCallback={handlePasswordReset}
-                trigger={
-                  <Pressable
-                    className="self-end mt-4 mb-2"
-                    disabled={loading}
-                    hitSlop={10}
-                    onPress={(event) => {
-                      event.preventDefault();
-                      setOpenForgotPass(true);
-                    }}
-                    style={({ pressed }) => ({
-                      opacity: pressed && !loading ? 0.72 : 1,
-                    })}
-                  >
-                    <Text
-                      className="text-[#6FC72C] text-[14px] font-medium"
-                      style={{ fontFamily: "System" }}
-                    >
-                      Esqueceu a senha?
-                    </Text>
-                  </Pressable>
-                }
               />
 
               <Pressable
