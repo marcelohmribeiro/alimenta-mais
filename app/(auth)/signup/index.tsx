@@ -1,5 +1,6 @@
 import { getAuthAlertData, signUpEmail } from "@/services/_auth";
 import { useLoading } from "@/store";
+import { apenasDigitos, formatarCPF, validarCPF } from "@/utils/validation";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -20,16 +21,35 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SignUp() {
   const [name, setName] = useState("");
+  const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { startLoading, stopLoading, loading } = useLoading();
+  const isLoading = loading > 0;
+
+  const handleCpfChange = (value: string) => {
+    setCpf(formatarCPF(value));
+  };
 
   const handleSignUp = async () => {
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    const cpfDigits = apenasDigitos(cpf);
+
+    if (!trimmedName) {
       Alert.alert("Nome obrigatorio", "Informe seu nome para criar a conta.");
+      return;
+    }
+
+    if (!cpfDigits) {
+      Alert.alert("CPF obrigatorio", "Informe seu CPF para criar a conta.");
+      return;
+    }
+
+    if (!validarCPF(cpfDigits)) {
+      Alert.alert("CPF invalido", "Informe um CPF valido para continuar.");
       return;
     }
 
@@ -39,14 +59,14 @@ export default function SignUp() {
     }
 
     try {
-      startLoading()
-      await signUpEmail(email, password, name.trim());
+      startLoading();
+      await signUpEmail(email, password, trimmedName, cpfDigits);
       router.replace("/(auth)/terms");
     } catch (error) {
       const { title, message } = getAuthAlertData(error, "Erro no cadastro");
       Alert.alert(title, message);
     } finally {
-      stopLoading()
+      stopLoading();
     }
   };
 
@@ -114,7 +134,28 @@ export default function SignUp() {
                   placeholderTextColor="#71717A"
                   autoCapitalize="words"
                   autoCorrect={false}
-                  editable={loading <= 0}
+                  editable={!isLoading}
+                  className="ml-3 flex-1 text-[16px] font-normal text-white"
+                  style={{ fontFamily: "System" }}
+                />
+              </View>
+
+              <Text
+                className="mb-2 ml-1 mt-5 text-sm font-medium text-white"
+                style={{ fontFamily: "System" }}
+              >
+                CPF
+              </Text>
+              <View className="h-[56px] flex-row items-center rounded-2xl border border-[#27272A] bg-[#0A0A0A] px-4">
+                <Ionicons name="card-outline" size={22} color="#6FC72C" />
+                <TextInput
+                  value={cpf}
+                  onChangeText={handleCpfChange}
+                  placeholder="000.000.000-00"
+                  placeholderTextColor="#71717A"
+                  keyboardType="numeric"
+                  maxLength={14}
+                  editable={!isLoading}
                   className="ml-3 flex-1 text-[16px] font-normal text-white"
                   style={{ fontFamily: "System" }}
                 />
@@ -136,7 +177,7 @@ export default function SignUp() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!loading}
+                  editable={!isLoading}
                   className="ml-3 flex-1 text-[16px] font-normal text-white"
                   style={{ fontFamily: "System" }}
                 />
@@ -160,16 +201,16 @@ export default function SignUp() {
                   placeholder="Crie uma senha"
                   placeholderTextColor="#71717A"
                   secureTextEntry={!showPassword}
-                  editable={loading <= 0}
+                  editable={!isLoading}
                   className="ml-3 mr-2 flex-1 text-[16px] font-normal text-white"
                   style={{ fontFamily: "System" }}
                 />
                 <Pressable
                   onPress={() => setShowPassword((current) => !current)}
-                  disabled={loading > 0}
+                  disabled={isLoading}
                   hitSlop={10}
                   style={({ pressed }) => ({
-                    opacity: pressed && loading <= 0 ? 0.72 : 1,
+                    opacity: pressed && !isLoading ? 0.72 : 1,
                   })}
                 >
                   <Ionicons
@@ -198,16 +239,16 @@ export default function SignUp() {
                   placeholder="Repita sua senha"
                   placeholderTextColor="#71717A"
                   secureTextEntry={!showConfirmPassword}
-                  editable={!loading}
+                  editable={!isLoading}
                   className="ml-3 mr-2 flex-1 text-[16px] font-normal text-white"
                   style={{ fontFamily: "System" }}
                 />
                 <Pressable
                   onPress={() => setShowConfirmPassword((current) => !current)}
-                  disabled={loading > 0}
+                  disabled={isLoading}
                   hitSlop={10}
                   style={({ pressed }) => ({
-                    opacity: pressed && loading <= 0 ? 0.72 : 1,
+                    opacity: pressed && !isLoading ? 0.72 : 1,
                   })}
                 >
                   <Ionicons
@@ -222,15 +263,15 @@ export default function SignUp() {
 
               <Pressable
                 className="mt-8"
-                disabled={loading > 0}
+                disabled={isLoading}
                 onPress={handleSignUp}
                 style={({ pressed }) => ({
-                  opacity: pressed && loading <= 0 ? 0.88 : 1,
+                  opacity: pressed && !isLoading ? 0.88 : 1,
                 })}
               >
                 <LinearGradient
                   colors={
-                    loading ? ["#3F7F2C", "#2B641F"] : ["#5ED62A", "#33A61A"]
+                    isLoading ? ["#3F7F2C", "#2B641F"] : ["#5ED62A", "#33A61A"]
                   }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -241,7 +282,7 @@ export default function SignUp() {
                     justifyContent: "center",
                   }}
                 >
-                  {loading ? (
+                  {isLoading ? (
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
                     <Text
