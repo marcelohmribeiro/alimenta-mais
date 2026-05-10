@@ -1,4 +1,5 @@
 import { db, getRequiredAuth } from "@/services/_firebase";
+import { apenasDigitos, validarCPF } from "@/utils/validation";
 import { doc, setDoc } from "firebase/firestore";
 import {
   GoogleAuthProvider,
@@ -28,6 +29,12 @@ const signUpSchema = z.object({
     .min(1, "Informe o e-mail.")
     .email("Informe um e-mail valido."),
   senha: z.string().min(6, "A senha precisa ter pelo menos 6 caracteres."),
+  cpf: z
+    .string()
+    .trim()
+    .min(1, "Informe o CPF.")
+    .transform(apenasDigitos)
+    .refine((value) => validarCPF(value), "Informe um CPF valido."),
 });
 
 const resetPasswordSchema = z
@@ -198,11 +205,13 @@ export const signUpEmail = async (
   email: string,
   password: string,
   name: string,
+  cpf: string,
 ) => {
   const parsedInput = signUpSchema.safeParse({
     nome: name,
     email,
     senha: password,
+    cpf,
   });
 
   if (!parsedInput.success) {
@@ -229,6 +238,7 @@ export const signUpEmail = async (
         {
           nome: parsedInput.data.nome,
           email: created.user.email ?? parsedInput.data.email,
+          cpf: parsedInput.data.cpf,
           telefone: "",
           fotoPerfil: "",
           tipoUsuario: "Receptor",

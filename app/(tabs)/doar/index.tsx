@@ -1,7 +1,6 @@
 import type { Donation } from "@/models/Donation";
 import { auth, db } from "@/services/_firebase";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import {
