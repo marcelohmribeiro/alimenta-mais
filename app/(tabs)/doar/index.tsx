@@ -2,15 +2,22 @@ import type { Donation } from "@/models/Donation";
 import { auth, db } from "@/services/_firebase";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { LinearGradient } from "expo-linear-gradient";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import React, { useState } from "react";
+import { router } from "expo-router";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -28,6 +35,14 @@ const formatarData = (text: string) => {
   if (numeros.length <= 4) return `${numeros.slice(0, 2)}/${numeros.slice(2)}`;
 
   return `${numeros.slice(0, 2)}/${numeros.slice(2, 4)}/${numeros.slice(4, 8)}`;
+};
+
+const formatarHorario = (text: string) => {
+  const numeros = text.replace(/\D/g, "").slice(0, 4);
+
+  if (numeros.length <= 2) return numeros;
+
+  return `${numeros.slice(0, 2)}:${numeros.slice(2)}`;
 };
 
 const dataValida = (data: string) => {
@@ -63,10 +78,45 @@ export default function DoarScreen() {
   const [descricao, setDescricao] = useState("");
   const [retirada, setRetirada] = useState<"doador" | "buscador">("doador");
   const [dataRetirada, setDataRetirada] = useState("");
-  const [horario, setHorario] = useState("");
+  const [horarioInicio, setHorarioInicio] = useState("");
+  const [horarioFim, setHorarioFim] = useState("");
   const [endereco, setEndereco] = useState("");
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [validandoDoador, setValidandoDoador] = useState(true);
+  const [ehDoador, setEhDoador] = useState(false);
+
+  useEffect(() => {
+    const verificarDoador = async () => {
+      try {
+        const uid = auth?.currentUser?.uid;
+
+        if (!uid || !db) {
+          setEhDoador(false);
+          return;
+        }
+
+        const userRef = doc(db, "users", uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+          setEhDoador(false);
+          return;
+        }
+
+        const data = userSnap.data();
+
+        setEhDoador(data?.tipoUsuario === "doador");
+      } catch (error) {
+        console.log("ERRO AO VALIDAR DOADOR:", error);
+        setEhDoador(false);
+      } finally {
+        setValidandoDoador(false);
+      }
+    };
+
+    verificarDoador();
+  }, []);
 
   const adicionarFoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -94,7 +144,12 @@ export default function DoarScreen() {
     if (validade.length !== 10) return "Informe a validade no formato DD/MM/AAAA.";
     if (!dataValida(validade)) return "Informe uma validade real e que não esteja vencida.";
     if (!dataRetirada.trim()) return "Informe a data disponível para retirada.";
-    if (!horario.trim()) return "Informe o horário disponível.";
+    if (dataRetirada.length !== 10) return "Informe a data de retirada no formato DD/MM/AAAA.";
+    if (!dataValida(dataRetirada)) return "Informe uma data de retirada real e que não esteja vencida.";
+    if (!horarioInicio.trim()) return "Informe o horário inicial.";
+    if (horarioInicio.length !== 5) return "Informe o horário inicial no formato HH:MM.";
+    if (!horarioFim.trim()) return "Informe o horário final.";
+    if (horarioFim.length !== 5) return "Informe o horário final no formato HH:MM.";
     if (!endereco.trim()) return "Informe o endereço de retirada.";
     if (!aceitouTermos) return "Aceite os termos e condições para continuar.";
     return null;
@@ -110,7 +165,8 @@ export default function DoarScreen() {
     setDescricao("");
     setRetirada("doador");
     setDataRetirada("");
-    setHorario("");
+    setHorarioInicio("");
+    setHorarioFim("");
     setEndereco("");
     setAceitouTermos(false);
   };
@@ -136,14 +192,15 @@ export default function DoarScreen() {
         categoria: string;
         tipoRetirada: string;
         dataRetirada: string;
-        horario: string;
+        horarioInicio: string;
+        horarioFim: string;
       } = {
         tipoAlimento: nomeAlimento.trim(),
         quantidade: quantidade.trim(),
         descricao: descricao.trim(),
         validade: validade.trim(),
         localizacao: endereco.trim(),
-        disponibilidade: `${dataRetirada.trim()} - ${horario.trim()}`,
+        disponibilidade: `${dataRetirada.trim()} - ${horarioInicio.trim()} até ${horarioFim.trim()}`,
         perecivel: tipoAlimento === "Perecível",
         observacoes: "",
         status: "disponivel",
@@ -153,19 +210,57 @@ export default function DoarScreen() {
         categoria,
         tipoRetirada: retirada,
         dataRetirada,
-        horario,
+        horarioInicio,
+        horarioFim,
       };
 
       await addDoc(collection(db, "donations"), donation);
 
       limparFormulario();
+
       Alert.alert("Sucesso", "Doação cadastrada com sucesso!");
-    } catch {
-      Alert.alert("Erro", "Não foi possível cadastrar a doação.");
+    } catch (error) {
+      console.log("ERRO AO CADASTRAR DOAÇÃO:", error);
+
+      Alert.alert("Erro", "Não foi possível cadastrar a doação. Veja o console.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (validandoDoador) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#0B0F0C] items-center justify-center">
+        <ActivityIndicator color="#65C90F" size="large" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!ehDoador) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#0B0F0C] items-center justify-center px-6">
+        <MaterialCommunityIcons name="shield-lock-outline" size={70} color="#65C90F" />
+
+        <Text className="text-white text-2xl font-bold mt-6 text-center">
+          Área exclusiva para doadores
+        </Text>
+
+        <Text className="text-[#A3A3A3] text-center mt-3">
+          Você precisa se cadastrar como doador antes de criar uma doação.
+        </Text>
+
+        <Pressable
+          onPress={() => {
+            console.log("CLICOU EM TORNAR-SE DOADOR");
+            router.push("/(tabs)/become-donor" as any);
+          }}
+          className="bg-[#65C90F] mt-8 px-6 py-4 rounded-2xl"
+        >
+          <Text className="text-[#081106] font-bold">Tornar-se doador</Text>
+        </Pressable>
+              </SafeAreaView>
+            );
+          }
 
   return (
     <SafeAreaView className="flex-1 bg-[#0B0F0C]">
@@ -315,24 +410,36 @@ export default function DoarScreen() {
                 />
               </View>
 
+              <Campo
+                label="Data disponível"
+                value={dataRetirada}
+                onChangeText={(text) => setDataRetirada(formatarData(text))}
+                placeholder="DD/MM/AAAA"
+                icon="calendar-outline"
+                keyboardType="numeric"
+                maxLength={10}
+              />
+
               <View className="flex-row gap-3">
                 <Campo
-                  label="Data disponível"
-                  value={dataRetirada}
-                  onChangeText={(text) => setDataRetirada(formatarData(text))}
-                  placeholder="DD/MM/AAAA"
-                  icon="calendar-outline"
+                  label="De"
+                  value={horarioInicio}
+                  onChangeText={(text) => setHorarioInicio(formatarHorario(text))}
+                  placeholder="18:00"
+                  icon="clock-outline"
                   keyboardType="numeric"
-                  maxLength={10}
+                  maxLength={5}
                   containerClassName="flex-1"
                 />
 
                 <Campo
-                  label="Horário"
-                  value={horario}
-                  onChangeText={setHorario}
-                  placeholder="08:00 - 18:00"
+                  label="Até"
+                  value={horarioFim}
+                  onChangeText={(text) => setHorarioFim(formatarHorario(text))}
+                  placeholder="22:00"
                   icon="clock-outline"
+                  keyboardType="numeric"
+                  maxLength={5}
                   containerClassName="flex-1"
                 />
               </View>
@@ -358,11 +465,7 @@ export default function DoarScreen() {
                     }`}
                   >
                     {aceitouTermos && (
-                      <MaterialCommunityIcons
-                        name="check"
-                        size={20}
-                        color="#FFFFFF"
-                      />
+                      <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
                     )}
                   </View>
 
@@ -375,16 +478,11 @@ export default function DoarScreen() {
                   </Text>
                 </View>
 
-                <MaterialCommunityIcons
-                  name="chevron-right"
-                  size={24}
-                  color="#A3A3A3"
-                />
+                <MaterialCommunityIcons name="chevron-right" size={24} color="#A3A3A3" />
               </TouchableOpacity>
             </Section>
 
-            <TouchableOpacity
-              activeOpacity={0.86}
+            <Pressable
               disabled={loading}
               onPress={salvarDoacao}
               className="mt-2"
@@ -415,14 +513,10 @@ export default function DoarScreen() {
                   </View>
                 )}
               </LinearGradient>
-            </TouchableOpacity>
+            </Pressable>
 
             <View className="flex-row justify-center items-center mt-4">
-              <MaterialCommunityIcons
-                name="lock-outline"
-                size={16}
-                color={GREEN}
-              />
+              <MaterialCommunityIcons name="lock-outline" size={16} color={GREEN} />
               <Text className="text-[#A3A3A3] text-[13px] ml-2">
                 Seus dados estão protegidos com segurança
               </Text>
@@ -500,27 +594,26 @@ function Campo({
           </View>
         )}
 
-<TextInput
-  value={value}
-  onChangeText={onChangeText}
-  placeholder={placeholder}
-  placeholderTextColor="#6B7280"
-  multiline={multiline}
-  textAlignVertical={multiline ? "top" : "center"}
-  keyboardType={keyboardType}
-  maxLength={maxLength}
-  className="flex-1 text-white text-[15px]"
-  style={[
-    {
-      minHeight: multiline ? 96 : 56,
-      paddingTop: multiline ? 14 : 0,
-      paddingBottom: multiline ? 14 : 0,
-    },
-    Platform.OS === "web"
-      ? ({ outlineStyle: "none" } as any)
-      : null,
-  ]}
-/>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#6B7280"
+          multiline={multiline}
+          textAlignVertical={multiline ? "top" : "center"}
+          keyboardType={keyboardType}
+          maxLength={maxLength}
+          className="flex-1 text-white text-[15px]"
+          style={[
+            {
+              minHeight: multiline ? 96 : 56,
+              paddingTop: multiline ? 14 : 0,
+              paddingBottom: multiline ? 14 : 0,
+            },
+            Platform.OS === "web" ? ({ outlineStyle: "none" } as any) : null,
+          ]}
+        />
+
         {maxLength && value.length > 0 && (
           <View className="justify-center ml-2">
             <Text className="text-[#A3A3A3] text-[12px]">
