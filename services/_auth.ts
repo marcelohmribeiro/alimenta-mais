@@ -1,6 +1,5 @@
 import { db, getRequiredAuth } from "@/services/_firebase";
 import { apenasDigitos, validarCPF } from "@/utils/validation";
-import { doc, setDoc } from "firebase/firestore";
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
@@ -9,6 +8,7 @@ import {
   signInWithPopup,
   updateProfile,
 } from "firebase/auth";
+import { collection, doc, getDocs, limit, query, setDoc, where } from "firebase/firestore";
 import { Platform } from "react-native";
 import { z } from "zod";
 
@@ -225,6 +225,35 @@ export const signUpEmail = async (
     const auth = requireConfiguredAuth(
       "Preencha as variaveis EXPO_PUBLIC_FB_* no arquivo .env para criar a conta.",
     );
+
+    if (db) {
+      try {
+        const cpfQuery = query(
+          collection(db, "users"),
+          where("cpf", "==", parsedInput.data.cpf),
+          limit(1),
+        );
+        const cpfSnapshot = await getDocs(cpfQuery);
+
+        if (!cpfSnapshot.empty) {
+          throw new AuthServiceError(
+            "CPF ja cadastrado",
+            "Este CPF ja esta em uso.",
+          );
+        }
+      } catch (error) {
+        if (error instanceof AuthServiceError) {
+          throw error;
+        }
+
+        console.error("Erro ao validar CPF no Firestore:", error);
+        throw new AuthServiceError(
+          "Erro no cadastro",
+          "Nao foi possivel validar o CPF.",
+        );
+      }
+    }
+
     const created = await createUserWithEmailAndPassword(
       auth,
       parsedInput.data.email,
@@ -251,6 +280,10 @@ export const signUpEmail = async (
 
     return created.user;
   } catch (error) {
+    if (error instanceof AuthServiceError) {
+      throw error;
+    }
+
     console.error("Erro no cadastro com Firebase Authentication:", error);
     throw new AuthServiceError("Erro no cadastro", getAuthErrorMessage(error));
   }
