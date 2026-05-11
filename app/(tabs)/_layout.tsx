@@ -92,7 +92,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="doar/index"
         options={{
-          href: isDonor ? "/(tabs)/doar" : null,
+          href: "/(tabs)/doar",
           title: "Doar",
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons
