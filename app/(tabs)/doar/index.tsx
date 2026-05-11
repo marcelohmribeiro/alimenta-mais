@@ -1,7 +1,9 @@
 import type { Donation } from "@/models/Donation";
 import { auth, db } from "@/services/_firebase";
+import useAuth from "@/hooks/_useAuth";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
   addDoc,
@@ -69,6 +71,7 @@ const dataValida = (data: string) => {
 };
 
 export default function DoarScreen() {
+  const { user, initializing } = useAuth();
   const [fotos, setFotos] = useState<string[]>([]);
   const [nomeAlimento, setNomeAlimento] = useState("");
   const [categoria, setCategoria] = useState("Prontos");
@@ -89,8 +92,7 @@ export default function DoarScreen() {
   useEffect(() => {
     const verificarDoador = async () => {
       try {
-        const uid = auth?.currentUser?.uid;
-
+        const uid = user?.uid;
         if (!uid || !db) {
           setEhDoador(false);
           return;
@@ -106,7 +108,9 @@ export default function DoarScreen() {
 
         const data = userSnap.data();
 
-        setEhDoador(data?.tipoUsuario === "doador");
+        setEhDoador(
+          String(data?.tipoUsuario || "").trim().toLowerCase() === "doador"
+        );
       } catch (error) {
         console.log("ERRO AO VALIDAR DOADOR:", error);
         setEhDoador(false);
@@ -116,7 +120,7 @@ export default function DoarScreen() {
     };
 
     verificarDoador();
-  }, []);
+  }, [user]);
 
   const adicionarFoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -204,7 +208,7 @@ export default function DoarScreen() {
         perecivel: tipoAlimento === "Perecível",
         observacoes: "",
         status: "disponivel",
-        donorId: auth?.currentUser?.uid ?? null,
+        donorId: user?.uid ?? null,
         createdAt: serverTimestamp(),
         fotos,
         categoria,
@@ -228,7 +232,7 @@ export default function DoarScreen() {
     }
   };
 
-  if (validandoDoador) {
+  if (initializing || validandoDoador) {
     return (
       <SafeAreaView className="flex-1 bg-[#0B0F0C] items-center justify-center">
         <ActivityIndicator color="#65C90F" size="large" />
