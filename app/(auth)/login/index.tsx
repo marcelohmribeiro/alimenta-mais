@@ -45,8 +45,9 @@ export default function Login() {
     }
   };
 
-  const handlePasswordReset = async () => {
+  const handlePasswordReset = async (email: string) => {
     try {
+      console.log(email, "email");
       setLoading(true);
       await resetPassword(email);
       Alert.alert(

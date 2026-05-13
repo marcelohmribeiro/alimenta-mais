@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Modal, Pressable, Text, TextInput, View } from "react-native";
+import z from "zod";
 
 interface ForgotPassowrdDialogProps {
   onSuccessCallback: (email: string) => void;
@@ -8,9 +9,11 @@ interface ForgotPassowrdDialogProps {
   loading?: boolean;
 }
 
-type FormData = {
-  email: string;
-};
+const forgotPasswordSchema = z.object({
+  email: z.string(),
+});
+
+type ForgotPasswordSchemaType = z.infer<typeof forgotPasswordSchema>;
 
 const ForgotPasswordDialog: React.FC<ForgotPassowrdDialogProps> = ({
   trigger,
@@ -24,16 +27,16 @@ const ForgotPasswordDialog: React.FC<ForgotPassowrdDialogProps> = ({
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm<FormData>({
+  } = useForm<ForgotPasswordSchemaType>({
     defaultValues: {
       email: "",
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = (data: ForgotPasswordSchemaType) => {
     setOpen(false);
     onSuccessCallback(data.email);
-    reset(); // limpa o campo depois
+    reset();
   };
 
   return (
