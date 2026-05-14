@@ -1,5 +1,5 @@
 import { db, getRequiredAuth } from "@/services/_firebase";
-import { apenasDigitos, validarCPF } from "@/utils/validation";
+import { apenasDigitos, validarCPF } from "@/utils";
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,

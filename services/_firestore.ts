@@ -1,5 +1,24 @@
+import { settings } from "@/settings";
+import {
+  CloudinaryServiceError,
+  deleteByToken,
+  uploadImages,
+} from "@/services/_cloudinary";
 import { db } from "@/services/_firebase";
-import { doc, getDoc, getDocFromCache, setDoc } from "firebase/firestore";
+import {
+  CloudinaryImageUploadResult,
+  DonationDocument,
+  DonorData,
+  SalvarDoacaoParams,
+} from "@/types";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 
 export class FirestoreServiceError extends Error {
   constructor(message: string) {
@@ -7,30 +26,6 @@ export class FirestoreServiceError extends Error {
     this.name = "FirestoreServiceError";
   }
 }
-
-export type DonorData = {
-  documento: string;
-  tipoDocumento: "cpf" | "cnpj";
-  endereco: string;
-  tipoUsuario: "doador";
-  atualizadoEm: string;
-};
-
-const normalizeTipoUsuario = (value: unknown) => {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  return value.trim().toLowerCase();
-};
-
-const getFirebaseErrorCode = (error: unknown) => {
-  if (typeof error === "object" && error && "code" in error) {
-    return String((error as { code?: unknown }).code ?? "");
-  }
-
-  return "";
-};
 
 export const salvarDoador = async (
   uid: string,
@@ -61,47 +56,110 @@ export const salvarDoador = async (
   }
 };
 
-export const verificarUsuarioDoador = async (uid: string): Promise<boolean> => {
-  if (!uid.trim()) {
+export const verificarSeUsuarioEhDoador = async (
+  uid?: string | null
+): Promise<boolean> => {
+  if (!uid || !db) {
     return false;
   }
 
+  try {
+    const userRef = doc(db, "users", uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      return false;
+    }
+
+    const data = userSnap.data();
+
+    return String(data?.tipoUsuario || "").trim().toLowerCase() === "doador";
+  } catch (error) {
+    console.error("Erro ao validar doador:", error);
+    return false;
+  }
+};
+
+const buildDonationFolder = (userId: string | null) =>
+  `alimenta-mais/donations/${userId ?? "anonymous"}`;
+
+const rollbackCloudinaryUploads = async (
+  uploads: CloudinaryImageUploadResult[]
+) => {
+  await Promise.allSettled(
+    uploads.map((upload) =>
+      upload.deleteToken ? deleteByToken(upload.deleteToken) : Promise.resolve()
+    )
+  );
+};
+
+export const salvarDoacao = async ({
+  userId,
+  fotos,
+  nomeAlimento,
+  categoria,
+  quantidade,
+  tipoAlimento,
+  validade,
+  descricao,
+  retirada,
+  dataRetirada,
+  horarioInicio,
+  horarioFim,
+  endereco,
+}: SalvarDoacaoParams): Promise<void> => {
   if (!db) {
     throw new FirestoreServiceError(
       "Banco de dados não configurado. Verifique as variáveis de ambiente do Firebase."
     );
   }
 
+  if (fotos.length > 0 && !settings.hasCloudinarySettings) {
+    throw new CloudinaryServiceError(
+      "Cloudinary não está configurado. Preencha EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME e EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET."
+    );
+  }
+
+  const uploadedPhotos =
+    fotos.length > 0
+      ? await uploadImages(fotos, {
+          folder: buildDonationFolder(userId),
+        })
+      : [];
+
+  const donation: DonationDocument = {
+    tipoAlimento: nomeAlimento.trim(),
+    quantidade: quantidade.trim(),
+    descricao: descricao.trim(),
+    validade: validade.trim(),
+    localizacao: endereco.trim(),
+    disponibilidade: `${dataRetirada.trim()} - ${horarioInicio.trim()} até ${horarioFim.trim()}`,
+    perecivel: tipoAlimento === "Perecível",
+    observacoes: "",
+    status: "disponivel",
+    donorId: userId,
+    createdAt: serverTimestamp(),
+    fotos: uploadedPhotos.map((photo) => ({
+      secureUrl: photo.secureUrl,
+      publicId: photo.publicId,
+      assetId: photo.assetId,
+    })),
+    categoria,
+    tipoRetirada: retirada,
+    dataRetirada,
+    horarioInicio,
+    horarioFim,
+  };
+
   try {
-    const userRef = doc(db, "users", uid);
-
-    try {
-      const cachedSnapshot = await getDocFromCache(userRef);
-
-      if (cachedSnapshot.exists()) {
-        return normalizeTipoUsuario(cachedSnapshot.data().tipoUsuario) === "doador";
-      }
-    } catch {
-      // Ignora cache vazio e segue para consulta principal.
-    }
-
-    const userSnapshot = await getDoc(userRef);
-
-    if (!userSnapshot.exists()) {
-      return false;
-    }
-
-    return normalizeTipoUsuario(userSnapshot.data().tipoUsuario) === "doador";
+    await addDoc(collection(db, "donations"), donation);
   } catch (error) {
-    const errorCode = getFirebaseErrorCode(error);
-
-    if (errorCode === "unavailable" || errorCode === "failed-precondition") {
-      return false;
-    }
-
-    console.error("Erro ao verificar se o usuário é doador:", error);
+    await rollbackCloudinaryUploads(uploadedPhotos).catch((rollbackError) => {
+      console.error("Erro ao reverter uploads no Cloudinary:", rollbackError);
+    });
+    console.error("Erro ao cadastrar doação:", error);
     throw new FirestoreServiceError(
-      "Não foi possível verificar o tipo do usuário. Tente novamente."
+      "Não foi possível cadastrar a doação. Tente novamente."
     );
   }
 };

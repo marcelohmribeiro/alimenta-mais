@@ -5,6 +5,8 @@ const envSchema = z.object({
   FB_AUTH_DOMAIN: z.string().default(""),
   FB_PROJECT_ID: z.string().default(""),
   FB_STORAGE_BUCKET: z.string().default(""),
+  CLOUDINARY_CLOUD_NAME: z.string().default(""),
+  CLOUDINARY_UPLOAD_PRESET: z.string().default(""),
 });
 
 const env = envSchema.parse({
@@ -12,9 +14,14 @@ const env = envSchema.parse({
   FB_AUTH_DOMAIN: process.env.EXPO_PUBLIC_FB_AUTH_DOMAIN ?? "",
   FB_PROJECT_ID: process.env.EXPO_PUBLIC_FB_PROJECT_ID ?? "",
   FB_STORAGE_BUCKET: process.env.EXPO_PUBLIC_FB_STORAGE_BUCKET ?? "",
+  CLOUDINARY_CLOUD_NAME: process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ?? "",
+  CLOUDINARY_UPLOAD_PRESET: process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? "",
 });
 
 export const settings = {
   ...env,
   hasFirebaseSettings: Boolean(env.FB_API_KEY && env.FB_AUTH_DOMAIN && env.FB_PROJECT_ID && env.FB_STORAGE_BUCKET),
+  hasCloudinarySettings: Boolean(
+    env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_UPLOAD_PRESET
+  ),
 };

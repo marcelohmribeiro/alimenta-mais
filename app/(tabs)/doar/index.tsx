@@ -1,17 +1,16 @@
-import type { Donation } from "@/models/Donation";
-import { auth, db } from "@/services/_firebase";
 import useAuth from "@/hooks/_useAuth";
+import {
+  CloudinaryServiceError,
+  FirestoreServiceError,
+  salvarDoacao,
+  verificarSeUsuarioEhDoador,
+} from "@/services";
+import { DonationPhotoInput } from "@/types";
+import { dataValida, formatarData, formatarHorario } from "@/utils";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  serverTimestamp,
-} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -30,49 +29,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const GREEN = "#65C90F";
 
-const formatarData = (text: string) => {
-  const numeros = text.replace(/\D/g, "");
-
-  if (numeros.length <= 2) return numeros;
-  if (numeros.length <= 4) return `${numeros.slice(0, 2)}/${numeros.slice(2)}`;
-
-  return `${numeros.slice(0, 2)}/${numeros.slice(2, 4)}/${numeros.slice(4, 8)}`;
-};
-
-const formatarHorario = (text: string) => {
-  const numeros = text.replace(/\D/g, "").slice(0, 4);
-
-  if (numeros.length <= 2) return numeros;
-
-  return `${numeros.slice(0, 2)}:${numeros.slice(2)}`;
-};
-
-const dataValida = (data: string) => {
-  const partes = data.split("/");
-  if (partes.length !== 3) return false;
-
-  const dia = Number(partes[0]);
-  const mes = Number(partes[1]);
-  const ano = Number(partes[2]);
-
-  if (!dia || !mes || !ano) return false;
-  if (mes < 1 || mes > 12) return false;
-
-  const ultimoDia = new Date(ano, mes, 0).getDate();
-  if (dia < 1 || dia > ultimoDia) return false;
-
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-
-  const informada = new Date(ano, mes - 1, dia);
-  informada.setHours(0, 0, 0, 0);
-
-  return informada >= hoje;
-};
-
 export default function DoarScreen() {
   const { user, initializing } = useAuth();
-  const [fotos, setFotos] = useState<string[]>([]);
+  const [fotos, setFotos] = useState<DonationPhotoInput[]>([]);
   const [nomeAlimento, setNomeAlimento] = useState("");
   const [categoria, setCategoria] = useState("Prontos");
   const [quantidade, setQuantidade] = useState("");
@@ -92,25 +51,7 @@ export default function DoarScreen() {
   useEffect(() => {
     const verificarDoador = async () => {
       try {
-        const uid = user?.uid;
-        if (!uid || !db) {
-          setEhDoador(false);
-          return;
-        }
-
-        const userRef = doc(db, "users", uid);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) {
-          setEhDoador(false);
-          return;
-        }
-
-        const data = userSnap.data();
-
-        setEhDoador(
-          String(data?.tipoUsuario || "").trim().toLowerCase() === "doador"
-        );
+        setEhDoador(await verificarSeUsuarioEhDoador(user?.uid));
       } catch (error) {
         console.log("ERRO AO VALIDAR DOADOR:", error);
         setEhDoador(false);
@@ -120,7 +61,7 @@ export default function DoarScreen() {
     };
 
     verificarDoador();
-  }, [user]);
+  }, [user?.uid]);
 
   const adicionarFoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -130,7 +71,12 @@ export default function DoarScreen() {
     });
 
     if (!result.canceled) {
-      const novasFotos = result.assets.map((asset) => asset.uri);
+      const novasFotos = result.assets.map((asset) => ({
+        uri: asset.uri,
+        mimeType: asset.mimeType,
+        fileName: asset.fileName,
+        file: asset.file,
+      }));
       setFotos((atual) => [...atual, ...novasFotos].slice(0, 3));
     }
   };
@@ -175,7 +121,7 @@ export default function DoarScreen() {
     setAceitouTermos(false);
   };
 
-  const salvarDoacao = async () => {
+  const handleSalvarDoacao = async () => {
     const erro = validarCampos();
 
     if (erro) {
@@ -183,42 +129,24 @@ export default function DoarScreen() {
       return;
     }
 
-    if (!db) {
-      Alert.alert("Erro", "Firebase não está configurado.");
-      return;
-    }
-
     try {
       setLoading(true);
 
-      const donation: Donation & {
-        fotos: string[];
-        categoria: string;
-        tipoRetirada: string;
-        dataRetirada: string;
-        horarioInicio: string;
-        horarioFim: string;
-      } = {
-        tipoAlimento: nomeAlimento.trim(),
-        quantidade: quantidade.trim(),
-        descricao: descricao.trim(),
-        validade: validade.trim(),
-        localizacao: endereco.trim(),
-        disponibilidade: `${dataRetirada.trim()} - ${horarioInicio.trim()} até ${horarioFim.trim()}`,
-        perecivel: tipoAlimento === "Perecível",
-        observacoes: "",
-        status: "disponivel",
-        donorId: user?.uid ?? null,
-        createdAt: serverTimestamp(),
+      await salvarDoacao({
+        userId: user?.uid ?? null,
         fotos,
+        nomeAlimento,
         categoria,
-        tipoRetirada: retirada,
+        quantidade,
+        tipoAlimento,
+        validade,
+        descricao,
+        retirada,
         dataRetirada,
         horarioInicio,
         horarioFim,
-      };
-
-      await addDoc(collection(db, "donations"), donation);
+        endereco,
+      });
 
       limparFormulario();
 
@@ -226,7 +154,13 @@ export default function DoarScreen() {
     } catch (error) {
       console.log("ERRO AO CADASTRAR DOAÇÃO:", error);
 
-      Alert.alert("Erro", "Não foi possível cadastrar a doação. Veja o console.");
+      const mensagem =
+        error instanceof FirestoreServiceError ||
+        error instanceof CloudinaryServiceError
+          ? error.message
+          : "Não foi possível cadastrar a doação. Veja o console.";
+
+      Alert.alert("Erro", mensagem);
     } finally {
       setLoading(false);
     }
@@ -303,9 +237,9 @@ export default function DoarScreen() {
             <Section title="Fotos do alimento" subtitle="Adicione fotos reais do alimento">
               <View className="flex-row gap-3">
                 {fotos.map((foto, index) => (
-                  <View key={foto} className="relative">
+                  <View key={`${foto.uri}-${index}`} className="relative">
                     <Image
-                      source={{ uri: foto }}
+                      source={{ uri: foto.uri }}
                       className="w-[92px] h-[92px] rounded-2xl"
                     />
                     <TouchableOpacity
@@ -488,7 +422,7 @@ export default function DoarScreen() {
 
             <Pressable
               disabled={loading}
-              onPress={salvarDoacao}
+              onPress={handleSalvarDoacao}
               className="mt-2"
             >
               <LinearGradient

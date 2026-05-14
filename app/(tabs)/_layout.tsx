@@ -1,41 +1,7 @@
-import useAuth from "@/hooks/_useAuth";
-import { verificarUsuarioDoador } from "@/services";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Tabs } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
 
 export default function TabLayout() {
-  const { user, initializing } = useAuth();
-  const [isDonor, setIsDonor] = useState<boolean | null>(null);
-
-  const carregarPerfilDoador = useCallback(async (uid: string) => {
-    if (!uid) {
-      setIsDonor(false);
-      return;
-    }
-
-    try {
-      const donatorStatus = await verificarUsuarioDoador(uid);
-      setIsDonor(Boolean(donatorStatus));
-    } catch (error) {
-      console.error("Erro ao verificar permissão de doador:", error);
-      setIsDonor(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (initializing) {
-      return;
-    }
-
-    if (!user) {
-      setIsDonor(false);
-      return;
-    }
-
-    carregarPerfilDoador(user.uid);
-  }, [user, initializing, carregarPerfilDoador]);
-
   return (
     <Tabs
       screenOptions={{

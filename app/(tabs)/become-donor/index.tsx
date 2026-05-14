@@ -1,7 +1,7 @@
 import useAuth from "@/hooks/_useAuth";
 import { FirestoreServiceError, salvarDoador } from "@/services";
 import { useLoading } from "@/store";
-import { apenasDigitos, formatarCNPJ, formatarCPF, validarCNPJ, validarCPF } from "@/utils/validation";
+import { apenasDigitos, formatarCNPJ, formatarCPF, validarCNPJ, validarCPF } from "@/utils";
 import { Ionicons } from "@expo/vector-icons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -9,15 +9,15 @@ import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
