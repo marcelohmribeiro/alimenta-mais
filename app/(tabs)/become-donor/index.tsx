@@ -1,7 +1,7 @@
 import useAuth from "@/hooks/_useAuth";
 import { FirestoreServiceError, salvarDoador } from "@/services";
 import { useLoading } from "@/store";
-import { apenasDigitos, formatarCNPJ, formatarCPF, validarCNPJ, validarCPF } from "@/utils";
+import { apenasDigitos, formatarCNPJ, validarCNPJ } from "@/utils";
 import { Ionicons } from "@expo/vector-icons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -9,19 +9,17 @@ import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-type TipoDocumento = "cpf" | "cnpj";
 
 const absoluteFill = {
   position: "absolute" as const,
@@ -32,21 +30,13 @@ export default function BecomeDonor() {
   const { user } = useAuth();
   const { startLoading, stopLoading, loading } = useLoading();
 
-  const [tipoDocumento, setTipoDocumento] = useState<TipoDocumento>("cpf");
   const [documento, setDocumento] = useState("");
   const [endereco, setEndereco] = useState("");
 
   const isLoading = loading > 0;
 
-  const handleTipoChange = (tipo: TipoDocumento) => {
-    setTipoDocumento(tipo);
-    setDocumento("");
-  };
-
   const handleDocumentoChange = (valor: string) => {
-    setDocumento(
-      tipoDocumento === "cpf" ? formatarCPF(valor) : formatarCNPJ(valor)
-    );
+    setDocumento(formatarCNPJ(valor));
   };
 
   const handleSubmit = async () => {
@@ -56,15 +46,9 @@ export default function BecomeDonor() {
     }
 
     const digitos = apenasDigitos(documento);
-    const valido = tipoDocumento === "cpf"
-      ? validarCPF(digitos)
-      : validarCNPJ(digitos);
 
-    if (!valido) {
-      Alert.alert(
-        "Documento inválido",
-        `Informe um ${tipoDocumento.toUpperCase()} válido.`
-      );
+    if (!validarCNPJ(digitos)) {
+      Alert.alert("Documento inválido", "Informe um CNPJ válido.");
       return;
     }
 
@@ -77,7 +61,7 @@ export default function BecomeDonor() {
       startLoading();
       await salvarDoador(user.uid, {
         documento: digitos,
-        tipoDocumento,
+        tipoDocumento: "cnpj",
         endereco: endereco.trim(),
       });
       stopLoading();
@@ -151,51 +135,14 @@ export default function BecomeDonor() {
             </View>
 
             <Text className="mb-2 ml-1 text-sm font-medium text-white">
-              Tipo de documento
-            </Text>
-            <View
-              className="flex-row rounded-[18px] mb-6 border border-white/5 bg-[#101514]"
-              style={{ padding: 4 }}
-            >
-              {(["cpf", "cnpj"] as TipoDocumento[]).map((tipo) => {
-                const ativo = tipoDocumento === tipo;
-                return (
-                  <TouchableOpacity
-                    key={tipo}
-                    onPress={() => handleTipoChange(tipo)}
-                    disabled={isLoading}
-                    style={{
-                      flex: 1,
-                      height: 44,
-                      borderRadius: 14,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: ativo ? "#65C90F" : "transparent",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: ativo ? "#081106" : "#A3A3A3",
-                        fontWeight: ativo ? "700" : "400",
-                        fontSize: 15,
-                      }}
-                    >
-                      {tipo.toUpperCase()}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <Text className="mb-2 ml-1 text-sm font-medium text-white">
-              {tipoDocumento === "cpf" ? "CPF" : "CNPJ"}
+              CNPJ
             </Text>
             <View className="h-[56px] flex-row items-center rounded-[18px] border border-white/5 bg-[#101514] px-4 mb-5">
               <MaterialCommunityIcons name="card-account-details-outline" size={22} color="#65C90F" />
               <TextInput
                 value={documento}
                 onChangeText={handleDocumentoChange}
-                placeholder={tipoDocumento === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"}
+                placeholder="00.000.000/0000-00"
                 placeholderTextColor="#6B7280"
                 keyboardType="numeric"
                 editable={!isLoading}
