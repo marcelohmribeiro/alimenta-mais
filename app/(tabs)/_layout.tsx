@@ -46,16 +46,6 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="buscar/index"
-        options={{
-          title: "Buscar",
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons size={24} name="magnify" color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
         name="doar/index"
         options={{
           href: "/(tabs)/doar",
