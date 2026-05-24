@@ -2,7 +2,7 @@ import type { ImagePickerAsset } from "expo-image-picker";
 
 export type DonationStatus =
   | "disponivel"
-  | "reservada"
+  | "reivindicada"
   | "retirada"
   | "cancelada";
 
@@ -19,6 +19,7 @@ export type Donation = {
   observacoes?: string;
   status: DonationStatus;
   donorId: string | null;
+  reivindicadoPor?: string | null;
   createdAt: unknown;
 };
 
