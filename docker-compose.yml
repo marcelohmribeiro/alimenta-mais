@@ -8,6 +8,12 @@ services:
     environment:
       EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
       CHOKIDAR_USEPOLLING: "1"
+      # Defina o IP LAN do host para o Expo Go no celular acessar o dev server.
+      REACT_NATIVE_PACKAGER_HOSTNAME: ${EXPO_LAN_IP:-}
+      # Use 1 para ativar o modo tunnel (quando LAN falhar).
+      EXPO_USE_TUNNEL: ${EXPO_USE_TUNNEL:-0}
+      # Token de acesso do Expo para evitar prompt interativo.
+      EXPO_TOKEN: ${EXPO_TOKEN:-}
       EXPO_PUBLIC_FB_API_KEY: ${EXPO_PUBLIC_FB_API_KEY:-}
       EXPO_PUBLIC_FB_AUTH_DOMAIN: ${EXPO_PUBLIC_FB_AUTH_DOMAIN:-}
       EXPO_PUBLIC_FB_PROJECT_ID: ${EXPO_PUBLIC_FB_PROJECT_ID:-}
@@ -16,11 +22,26 @@ services:
       EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET: ${EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET:-}
       # Para Android em alguns ambientes Linux com OpenSSL 3
       NODE_OPTIONS: --openssl-legacy-provider
-    command: sh -c "npm install --package-lock=false && npx expo start --lan --clear"
+    command: >-
+      sh -c "npm install --legacy-peer-deps --package-lock=false &&
+      if [ \"${EXPO_USE_TUNNEL}\" = \"1\" ]; then
+        echo 'Expo: usando tunnel (ngrok)';
+        npx expo start --tunnel --clear;
+      else
+        if [ -z \"${EXPO_LAN_IP}\" ]; then
+          echo 'Expo: EXPO_LAN_IP nao definido. Defina o IP LAN do host (ex: 192.168.0.10).' >&2;
+          exit 1;
+        fi;
+        echo \"Expo: usando LAN em ${EXPO_LAN_IP}\";
+        npx expo start --lan --clear;
+      fi"
     volumes:
       - ./:/app
       - /app/node_modules
-    # Em Linux, host network facilita descoberta e acesso via Expo Go na LAN.
-    network_mode: host
+    ports:
+      - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
     stdin_open: true
     tty: true

@@ -10,7 +10,7 @@ RUN apt-get update \
 COPY package.json ./
 
 # Instala em build para acelerar o primeiro up.
-RUN npm install --package-lock=false
+RUN npm install --legacy-peer-deps --package-lock=false
 
 COPY . .
 
