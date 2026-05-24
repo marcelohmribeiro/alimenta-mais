@@ -274,15 +274,13 @@ export default function Home() {
       <Box className="flex-1 bg-[#09090B] pt-12 px-4">
         {/* Header */}
         <HStack className="flex-row items-center justify-between mb-6">
-          <TouchableOpacity>
-            <FontAwesome5 name="arrow-left" size={20} color="white" />
-          </TouchableOpacity>
-
-          <Text className="text-white text-xl font-semibold">
-            Buscar doações
+          <Text className="text-white text-2xl font-bold">
+            Doações
           </Text>
 
-          <Box className="w-6" />
+          <Box className="bg-[#1E3A0A] w-10 h-10 rounded-full items-center justify-center">
+            <FontAwesome5 name="seedling" size={16} color="#84CC16" />
+          </Box>
         </HStack>
 
         {/* Search */}
@@ -317,8 +315,6 @@ export default function Home() {
         <Box className="h-12 mb-4">
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {categories.map((cat) => {
-              const isSelected = selectedCategory === cat;
-
               return (
                 <TouchableOpacity
                   key={cat}

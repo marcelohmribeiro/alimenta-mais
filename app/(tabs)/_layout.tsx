@@ -52,7 +52,7 @@ export default function TabLayout() {
           title: "Doar",
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons
-              size={22}
+              size={24}
               name="heart-outline"
               color={color}
             />
@@ -66,7 +66,7 @@ export default function TabLayout() {
           title: "Histórico",
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons
-              size={22}
+              size={24}
               name="clipboard-text-outline"
               color={color}
             />
@@ -80,7 +80,7 @@ export default function TabLayout() {
           title: "Perfil",
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons
-              size={23}
+              size={24}
               name={focused ? "account" : "account-outline"}
               color={color}
             />
