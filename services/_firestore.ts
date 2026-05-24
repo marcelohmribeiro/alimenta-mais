@@ -8,6 +8,7 @@ import { db } from "@/services/_firebase";
 import {
   CloudinaryImageUploadResult,
   DonationDocument,
+  DonationDocumentWithId,
   DonorData,
   SalvarDoacaoParams,
 } from "@/types";
@@ -16,6 +17,9 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
+  orderBy,
+  query,
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
@@ -160,6 +164,32 @@ export const salvarDoacao = async ({
     console.error("Erro ao cadastrar doação:", error);
     throw new FirestoreServiceError(
       "Não foi possível cadastrar a doação. Tente novamente."
+    );
+  }
+};
+
+export const listarDoacoes = async (): Promise<DonationDocumentWithId[]> => {
+  if (!db) {
+    throw new FirestoreServiceError(
+      "Banco de dados não configurado. Verifique as variáveis de ambiente do Firebase."
+    );
+  }
+
+  try {
+    const donationsQuery = query(
+      collection(db, "donations"),
+      orderBy("createdAt", "desc")
+    );
+    const snapshot = await getDocs(donationsQuery);
+
+    return snapshot.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...(docSnap.data() as DonationDocument),
+    }));
+  } catch (error) {
+    console.error("Erro ao carregar doações:", error);
+    throw new FirestoreServiceError(
+      "Não foi possível carregar as doações. Tente novamente."
     );
   }
 };
