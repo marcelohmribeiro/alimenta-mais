@@ -1,3 +1,6 @@
+import useAuth from "@/hooks/_useAuth";
+import { FirestoreServiceError, listarDoacoes, reivindicarDoacao } from "@/services";
+import { DonationDocumentWithId, DonationStatus } from "@/types";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import {
   Box,
@@ -13,11 +16,10 @@ import {
   Text,
   VStack,
 } from "@gluestack-ui/themed";
-import { listarDoacoes } from "@/services";
-import { DonationDocumentWithId } from "@/types";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   TextInput,
@@ -41,50 +43,90 @@ type DonationCardItem = {
   date: string;
   category: string;
   imageUri?: string | null;
+  status: DonationStatus;
 };
 
-type DonationCardProps = Omit<DonationCardItem, "id" | "category">;
+type DonationCardProps = Omit<DonationCardItem, "id" | "category"> & {
+  onReivindicar?: () => void;
+  reivindicando?: boolean;
+};
 
-const DonationCard = ({ title, weight, distance, date, imageUri }: DonationCardProps) => (
-  <Box className="bg-[#141416] rounded-[24px] p-3 mb-3 flex-row items-center border border-[#1E1E21]">
-    <Image
-      source={imageUri ? { uri: imageUri } : fallbackImage}
-      className="w-[100px] h-[100px] rounded-[20px]"
-      resizeMode="cover"
-    />
+const DonationCard = ({
+  title,
+  weight,
+  distance,
+  date,
+  imageUri,
+  status,
+  onReivindicar,
+  reivindicando,
+}: DonationCardProps) => (
+  <Box className="bg-[#141416] rounded-[24px] p-3 mb-3 border border-[#1E1E21]">
+    <HStack className="flex-row items-center">
+      <Image
+        source={imageUri ? { uri: imageUri } : fallbackImage}
+        className="w-[100px] h-[100px] rounded-[20px]"
+        resizeMode="cover"
+      />
 
-    <VStack className="ml-4 flex-1 items-start">
-      <Text className="text-white font-semibold text-lg leading-tight mb-0.5">
-        {title}
-      </Text>
-
-      <Text className="text-[#A1A1AA] text-sm mb-2">{weight}</Text>
-
-      <HStack className="flex-row items-center mb-1">
-        <FontAwesome5 name="map-marker-alt" size={12} color="#65A30D" />
-
-        <Text className="text-[#A1A1AA] text-[13px] ml-2">{distance}</Text>
-      </HStack>
-
-      <HStack className="flex-row items-center">
-        <FontAwesome5 name="clock" size={12} color="#65A30D" />
-
-        <Text className="text-[#A1A1AA] text-[13px] ml-2">
-          Validade: {date}
+      <VStack className="ml-4 flex-1 items-start">
+        <Text className="text-white font-semibold text-lg leading-tight mb-0.5">
+          {title}
         </Text>
-      </HStack>
-    </VStack>
+
+        <Text className="text-[#A1A1AA] text-sm mb-2">{weight}</Text>
+
+        <HStack className="flex-row items-center mb-1">
+          <FontAwesome5 name="map-marker-alt" size={12} color="#65A30D" />
+
+          <Text className="text-[#A1A1AA] text-[13px] ml-2">{distance}</Text>
+        </HStack>
+
+        <HStack className="flex-row items-center">
+          <FontAwesome5 name="clock" size={12} color="#65A30D" />
+
+          <Text className="text-[#A1A1AA] text-[13px] ml-2">
+            Validade: {date}
+          </Text>
+        </HStack>
+      </VStack>
+    </HStack>
+
+    {status === "disponivel" ? (
+      <TouchableOpacity
+        onPress={onReivindicar}
+        disabled={reivindicando}
+        activeOpacity={0.8}
+        className="mt-3"
+      >
+        <Box className="bg-[#65A30D] rounded-2xl h-10 items-center justify-center">
+          {reivindicando ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text className="text-white font-semibold text-sm">
+              Reivindicar doação
+            </Text>
+          )}
+        </Box>
+      </TouchableOpacity>
+    ) : status === "reivindicada" ? (
+      <Box className="mt-3 bg-[#27272A] rounded-2xl h-10 items-center justify-center">
+        <Text className="text-[#71717A] text-sm">Já reivindicada</Text>
+      </Box>
+    ) : null}
   </Box>
 );
 
 export default function Home() {
+  const { user } = useAuth();
   const [showLocationModal, setShowLocationModal] = useState(false);
-
+  
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todas");
   const [donations, setDonations] = useState<DonationDocumentWithId[]>([]);
   const [loadingDonations, setLoadingDonations] = useState(true);
   const [donationsError, setDonationsError] = useState<string | null>(null);
+  const [reivindicandoId, setReivindicandoId] = useState<string | null>(null);
 
   useEffect(() => {
     checkLocationPermission();
@@ -154,6 +196,37 @@ export default function Home() {
     }
   };
 
+  const handleReivindicar = async (donationId: string) => {
+    if (!user) {
+      Alert.alert(
+        "Atenção",
+        "Você precisa estar logado para reivindicar uma doação."
+      );
+      return;
+    }
+
+    setReivindicandoId(donationId);
+    try {
+      await reivindicarDoacao(donationId, user.uid);
+      setDonations((prev) =>
+        prev.map((d) =>
+          d.id === donationId
+            ? { ...d, status: "reivindicada", reivindicadoPor: user.uid }
+            : d
+        )
+      );
+      Alert.alert("Sucesso!", "Doação reivindicada com sucesso.");
+    } catch (error) {
+      const message =
+        error instanceof FirestoreServiceError
+          ? error.message
+          : "Não foi possível reivindicar a doação. Tente novamente.";
+      Alert.alert("Erro", message);
+    } finally {
+      setReivindicandoId(null);
+    }
+  };
+
   const categories = useMemo(() => {
     const fromData = donations
       .map((donation) => donation.categoria)
@@ -174,6 +247,7 @@ export default function Home() {
         date: donation.validade,
         category: donation.categoria,
         imageUri: donation.fotos?.[0]?.secureUrl ?? null,
+        status: donation.status,
       })),
     [donations]
   );
@@ -300,6 +374,9 @@ export default function Home() {
                 distance={item.distance}
                 date={item.date}
                 imageUri={item.imageUri}
+                status={item.status}
+                onReivindicar={() => handleReivindicar(item.id)}
+                reivindicando={reivindicandoId === item.id}
               />
             ))
           ) : (
