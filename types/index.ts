@@ -80,6 +80,10 @@ export type DonationDocument = Donation & {
   horarioFim: string;
 };
 
+export type DonationDocumentWithId = DonationDocument & {
+  id: string;
+};
+
 export type CloudinaryUploadOptions = {
   folder?: string;
 };
@@ -101,4 +105,3 @@ export type ParsedCloudinaryResponse = {
   payload: CloudinaryUploadApiResponse | null;
   rawText: string;
 };
-

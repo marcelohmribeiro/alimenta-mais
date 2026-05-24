@@ -13,64 +13,42 @@ import {
   Text,
   VStack,
 } from "@gluestack-ui/themed";
+import { listarDoacoes } from "@/services";
+import { DonationDocumentWithId } from "@/types";
 import React, { useEffect, useMemo, useState } from "react";
-import { Image, ScrollView, TextInput, TouchableOpacity } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 
-const categories = ["Todas", "Frutas", "Verduras", "Pães"];
-
 const LOCATION_PERMISSION_KEY = "@location_permission_granted";
 
-const donations = [
-  {
-    id: 1,
-    title: "Pães frescos",
-    weight: "1kg de pães",
-    distance: "2,3 km",
-    date: "20/04",
-    category: "Pães",
-    imageUri:
-      "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=300",
-  },
-  {
-    id: 2,
-    title: "Frutas variadas",
-    weight: "2kg de frutas",
-    distance: "1,8 km",
-    date: "21/04",
-    category: "Frutas",
-    imageUri:
-      "https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=300",
-  },
-  {
-    id: 3,
-    title: "Refeição pronta",
-    weight: "Marmitex",
-    distance: "2,7 km",
-    date: "20/04",
-    category: "Pães",
-    imageUri:
-      "https://images.unsplash.com/photo-1547592166-23ac45744acd?q=80&w=300",
-  },
-  {
-    id: 4,
-    title: "Legumes variados",
-    weight: "2kg de legumes",
-    distance: "2,0 km",
-    date: "19/04",
-    category: "Verduras",
-    imageUri:
-      "https://images.unsplash.com/photo-1566385101042-1a000c1267c4?q=80&w=300",
-  },
-];
+const fallbackImage = require("@/assets/images/pao.jpg");
+const baseCategories = ["Todas", "Prontos", "Frutas", "Verduras", "Pães"];
 
-const DonationCard = ({ title, weight, distance, date, imageUri }: any) => (
+type DonationCardItem = {
+  id: string;
+  title: string;
+  weight: string;
+  distance: string;
+  date: string;
+  category: string;
+  imageUri?: string | null;
+};
+
+type DonationCardProps = Omit<DonationCardItem, "id" | "category">;
+
+const DonationCard = ({ title, weight, distance, date, imageUri }: DonationCardProps) => (
   <Box className="bg-[#141416] rounded-[24px] p-3 mb-3 flex-row items-center border border-[#1E1E21]">
     <Image
-      source={{ uri: imageUri }}
+      source={imageUri ? { uri: imageUri } : fallbackImage}
       className="w-[100px] h-[100px] rounded-[20px]"
       resizeMode="cover"
     />
@@ -104,9 +82,44 @@ export default function Home() {
 
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todas");
+  const [donations, setDonations] = useState<DonationDocumentWithId[]>([]);
+  const [loadingDonations, setLoadingDonations] = useState(true);
+  const [donationsError, setDonationsError] = useState<string | null>(null);
 
   useEffect(() => {
     checkLocationPermission();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadDonations = async () => {
+      try {
+        setLoadingDonations(true);
+        setDonationsError(null);
+        const data = await listarDoacoes();
+
+        if (active) {
+          setDonations(data);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar doações:", error);
+        if (active) {
+          setDonationsError("Não foi possível carregar as doações.");
+          setDonations([]);
+        }
+      } finally {
+        if (active) {
+          setLoadingDonations(false);
+        }
+      }
+    };
+
+    loadDonations();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const checkLocationPermission = async () => {
@@ -141,20 +154,46 @@ export default function Home() {
     }
   };
 
+  const categories = useMemo(() => {
+    const fromData = donations
+      .map((donation) => donation.categoria)
+      .filter(Boolean);
+    const unique = Array.from(new Set([...baseCategories, ...fromData]));
+    return unique;
+  }, [donations]);
+
+  const donationCards = useMemo<DonationCardItem[]>(
+    () =>
+      donations.map((donation) => ({
+        id: donation.id,
+        title: donation.tipoAlimento,
+        weight: donation.quantidade,
+        distance: donation.localizacao
+          ? `Local: ${donation.localizacao}`
+          : "Localização não informada",
+        date: donation.validade,
+        category: donation.categoria,
+        imageUri: donation.fotos?.[0]?.secureUrl ?? null,
+      })),
+    [donations]
+  );
+
   const filteredDonations = useMemo(() => {
-    return donations.filter((item) => {
+    return donationCards.filter((item) => {
       const matchesCategory =
         selectedCategory === "Todas"
           ? true
           : item.category === selectedCategory;
 
+      const searchTerm = search.toLowerCase();
       const matchesSearch =
-        item.title.toLowerCase().includes(search.toLowerCase()) ||
-        item.weight.toLowerCase().includes(search.toLowerCase());
+        item.title.toLowerCase().includes(searchTerm) ||
+        item.weight.toLowerCase().includes(searchTerm) ||
+        item.distance.toLowerCase().includes(searchTerm);
 
       return matchesCategory && matchesSearch;
     });
-  }, [search, selectedCategory]);
+  }, [donationCards, search, selectedCategory]);
 
   return (
     <SafeAreaView className="flex-1 bg-[#0B0F0C]">
@@ -245,7 +284,14 @@ export default function Home() {
             paddingBottom: 100,
           }}
         >
-          {filteredDonations.length > 0 ? (
+          {loadingDonations ? (
+            <Box className="items-center justify-center mt-20">
+              <ActivityIndicator color="#65A30D" size="large" />
+              <Text className="text-[#A1A1AA] text-center mt-4">
+                Carregando doações...
+              </Text>
+            </Box>
+          ) : filteredDonations.length > 0 ? (
             filteredDonations.map((item) => (
               <DonationCard
                 key={item.id}
@@ -263,11 +309,13 @@ export default function Home() {
               </Box>
 
               <Text className="text-white text-lg font-semibold mb-2">
-                Nenhuma doação encontrada
+                {donationsError ?? "Nenhuma doação encontrada"}
               </Text>
 
               <Text className="text-[#71717A] text-center px-8">
-                Tente pesquisar outro alimento ou mudar a categoria.
+                {donationsError
+                  ? "Tente novamente mais tarde."
+                  : "Tente pesquisar outro alimento ou mudar a categoria."}
               </Text>
             </Box>
           )}
