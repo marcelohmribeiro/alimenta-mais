@@ -107,31 +107,3 @@ export type ParsedCloudinaryResponse = {
   payload: CloudinaryUploadApiResponse | null;
   rawText: string;
 };
-
-export type SolicitacaoStatus = "pendente" | "aceita" | "recusada";
-
-export type MotivoRecusa =
-  | "Alimento venceu"
-  | "Alimento estragou"
-  | "Não consigo fazer essa entrega"
-  | "Não consigo entregar no dia combinado"
-  | "Doação já realizada";
-
-export type Solicitacao = {
-  id?: string;
-  doacaoId: string;
-  doadorId: string;
-  solicitanteId: string;
-  solicitanteNome: string;
-  solicitanteAvatar: string | null;
-  doacaoTitulo: string;
-  doacaoQuantidade: string;
-  doacaoValidade: string;
-  doacaoCategoria: string;
-  status: SolicitacaoStatus;
-  motivoRecusa?: MotivoRecusa | null;
-  criadoEm: unknown;
-  atualizadoEm?: unknown;
-};
-
-export type SolicitacaoComId = Solicitacao & { id: string };

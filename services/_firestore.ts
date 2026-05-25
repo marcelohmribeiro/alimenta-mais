@@ -171,16 +171,7 @@ export const salvarDoacao = async ({
 
 export const reivindicarDoacao = async (
   donationId: string,
-  userId: string,
-  dadosDoacao: {
-    titulo: string;
-    quantidade: string;
-    validade: string;
-    categoria: string;
-    doadorId: string;
-    solicitanteNome: string;
-    solicitanteAvatar: string | null;
-  }
+  userId: string
 ): Promise<void> => {
   if (!db) {
     throw new FirestoreServiceError(
@@ -208,23 +199,6 @@ export const reivindicarDoacao = async (
     transaction.update(donationRef, {
       status: "em análise",
       reivindicadoPor: userId,
-    });
-
-    const solicitacaoRef = doc(collection(db!, "solicitacoes"));
-    transaction.set(solicitacaoRef, {
-      doacaoId: donationId,
-      doadorId: dadosDoacao.doadorId,
-      solicitanteId: userId,
-      solicitanteNome: dadosDoacao.solicitanteNome,
-      solicitanteAvatar: dadosDoacao.solicitanteAvatar,
-      doacaoTitulo: dadosDoacao.titulo,
-      doacaoQuantidade: dadosDoacao.quantidade,
-      doacaoValidade: dadosDoacao.validade,
-      doacaoCategoria: dadosDoacao.categoria,
-      status: "pendente",
-      motivoRecusa: null,
-      criadoEm: serverTimestamp(),
-      atualizadoEm: serverTimestamp(),
     });
   });
 };
