@@ -18,6 +18,12 @@ export const menuItems = [
     route: undefined,
   },
   {
+    icon: "inbox-arrow-down-outline",
+    title: "Solicitações recebidas",
+    subtitle: "Gerencie pedidos das suas doações",
+    route: "/(tabs)/solicitacoes-recebidas",
+  },
+  {
     icon: "map-marker-outline",
     title: "Endereços salvos",
     subtitle: "Gerencie seus endereços",
