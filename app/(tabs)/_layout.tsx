@@ -75,6 +75,20 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="solicitacoes-recebidas/index"
+        options={{
+          title: "Solicitações",
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons
+              size={24}
+              name={focused ? "inbox-arrow-down" : "inbox-arrow-down-outline"}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="perfil/index"
         options={{
           title: "Perfil",

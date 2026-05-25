@@ -1,10 +1,10 @@
-import { settings } from "@/settings";
 import {
   CloudinaryServiceError,
   deleteByToken,
   uploadImages,
 } from "@/services/_cloudinary";
 import { db } from "@/services/_firebase";
+import { settings } from "@/settings";
 import {
   CloudinaryImageUploadResult,
   DonationDocument,
@@ -197,7 +197,7 @@ export const reivindicarDoacao = async (
     }
 
     transaction.update(donationRef, {
-      status: "reivindicada",
+      status: "em análise",
       reivindicadoPor: userId,
     });
   });

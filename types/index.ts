@@ -2,9 +2,10 @@ import type { ImagePickerAsset } from "expo-image-picker";
 
 export type DonationStatus =
   | "disponivel"
-  | "reivindicada"
-  | "retirada"
-  | "cancelada";
+  | "em análise"
+  | "aprovado"
+  | "cancelada"
+  | "rejeitada";
 
 export type Donation = {
   tipoAlimento: string;
