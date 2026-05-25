@@ -9,9 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "com.marcelohmribeiro.alimentamais",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.marcelohmribeiro.alimentamais",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -56,7 +58,8 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/301ef7fb-d473-401e-909b-012454d38ee2"
+      "url": "https://u.expo.dev/301ef7fb-d473-401e-909b-012454d38ee2",
+      "enabled": false
     }
   }
 }
