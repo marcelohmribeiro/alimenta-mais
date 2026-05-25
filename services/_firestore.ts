@@ -170,7 +170,7 @@ export const salvarDoacao = async ({
   }
 };
 
-export const reivindicarDoacao = async (
+export const solicitarDoacao = async (
   donationId: string,
   userId: string,
   dadosDoacao: {
@@ -209,10 +209,7 @@ export const reivindicarDoacao = async (
     }
 
     transaction.update(donationRef, {
-      status: "em análise",
-      reivindicadoPor: userId,
-      dataAgendada,
-      horarioAgendado,
+      status: "indisponivel"
     });
 
     const solicitacaoRef = doc(collection(db!, "solicitacoes"));
@@ -222,10 +219,8 @@ export const reivindicarDoacao = async (
       solicitanteId: userId,
       solicitanteNome: dadosDoacao.solicitanteNome,
       solicitanteAvatar: dadosDoacao.solicitanteAvatar,
-      doacaoTitulo: dadosDoacao.titulo,
-      doacaoQuantidade: dadosDoacao.quantidade,
-      doacaoValidade: dadosDoacao.validade,
-      doacaoCategoria: dadosDoacao.categoria,
+      dataAgendada,
+      horarioAgendado,
       status: "pendente",
       motivoRecusa: null,
       criadoEm: serverTimestamp(),

@@ -6,6 +6,7 @@ import {
   db,
   recusarSolicitacao,
 } from "@/services";
+import { useLoading } from "@/store";
 import { MotivoRecusa, SolicitacaoComId, SolicitacaoStatus, UserProfile } from "@/types";
 import Feather from "@expo/vector-icons/Feather";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -30,13 +31,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 type StatusFilter = "todas" | SolicitacaoStatus;
 
+type SolicitacaoEnriquecida = SolicitacaoComId & {
+  doacaoFotoUrl?: string | null;
+};
+
 const fallbackImage = require("@/assets/images/pao.jpg");
 
 const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
   { label: "Todas", value: "todas" },
-  { label: "Pendentes", value: "pendente" },
-  { label: "Aceitas", value: "aceita" },
-  { label: "Recusadas", value: "recusada" },
+  { label: "Em análise", value: "em_analise" },
+  { label: "Aprovada", value: "aprovada" },
+  { label: "Rejeitada", value: "rejeitada" },
 ];
 
 const MOTIVOS_RECUSA: MotivoRecusa[] = [
@@ -47,24 +52,24 @@ const MOTIVOS_RECUSA: MotivoRecusa[] = [
   "Doação já realizada",
 ];
 
-const statusBadge: Record <
+const statusBadge: Record<
   SolicitacaoStatus,
   { label: string; bg: string; color: string; icon: string }
 > = {
-  pendente: {
-    label: "Pendente",
+  em_analise: {
+    label: "Em análise",
     bg: "rgba(234,179,8,0.12)",
     color: "#FACC15",
     icon: "clock-outline",
   },
-  aceita: {
-    label: "Aceita",
+  aprovada: {
+    label: "Aprovada",
     bg: "rgba(101,201,15,0.15)",
     color: "#7DE11B",
     icon: "check-decagram",
   },
-  recusada: {
-    label: "Recusada",
+  rejeitada: {
+    label: "Rejeitada",
     bg: "rgba(248,113,113,0.12)",
     color: "#F87171",
     icon: "close-circle-outline",
@@ -153,19 +158,26 @@ const BecomeDonorEmptyState = () => (
 );
 
 type SolicitacaoCardProps = {
-  item: SolicitacaoComId;
-  onAceitar: (item: SolicitacaoComId) => void;
-  onRecusar: (item: SolicitacaoComId) => void;
+  item: SolicitacaoEnriquecida;
+  onAceitar: (item: SolicitacaoEnriquecida) => void;
+  onRecusar: (item: SolicitacaoEnriquecida) => void;
+};
+
+const normalizeStatus = (status: string): SolicitacaoStatus => {
+  if (status === "aceita" || status === "aprovada") return "aprovada";
+  if (status === "recusada" || status === "rejeitada") return "rejeitada";
+  return "em_analise";
 };
 
 const SolicitacaoCard = ({ item, onAceitar, onRecusar }: SolicitacaoCardProps) => {
-  const badge = statusBadge[item.status];
+  const normalizedStatus = normalizeStatus(item.status);
+  const badge = statusBadge[normalizedStatus];
 
   return (
     <View className="mb-4 overflow-hidden rounded-[22px] border border-white/5 bg-[#101514]">
       <View className="flex-row items-center border-b border-white/5 px-4 py-3">
         <Image
-          source={fallbackImage}
+          source={item.doacaoFotoUrl ? { uri: item.doacaoFotoUrl } : fallbackImage}
           className="h-12 w-12 rounded-[14px]"
           resizeMode="cover"
         />
@@ -207,7 +219,7 @@ const SolicitacaoCard = ({ item, onAceitar, onRecusar }: SolicitacaoCardProps) =
           </View>
         </View>
 
-        {item.status === "pendente" ? (
+        {normalizedStatus === "em_analise" ? (
           <View className="mt-4 mb-4 flex-row" style={{ gap: 12 }}>
             <Pressable
               onPress={() => onRecusar(item)}
@@ -248,7 +260,7 @@ const SolicitacaoCard = ({ item, onAceitar, onRecusar }: SolicitacaoCardProps) =
             <View className="flex-row items-center">
               <MaterialCommunityIcons name={badge.icon as any} size={16} color={badge.color} />
               <Text className="ml-2 text-[13px] font-medium" style={{ color: badge.color }}>
-                {item.status === "aceita" ? "Solicitação aceita" : "Solicitação recusada"}
+                {normalizedStatus === "aprovada" ? "Solicitação aceita" : "Solicitação recusada"}
               </Text>
             </View>
             {item.motivoRecusa ? (
@@ -264,21 +276,21 @@ const SolicitacaoCard = ({ item, onAceitar, onRecusar }: SolicitacaoCardProps) =
 export default function SolicitacoesRecebidasScreen() {
   const { user, initializing } = useAuth();
 
-  const [loading, setLoading] = useState(true);
+  const { startLoading, stopLoading } = useLoading();
   const [isDoador, setIsDoador] = useState(false);
-  const [solicitacoes, setSolicitacoes] = useState<SolicitacaoComId[]>([]);
+  const [solicitacoes, setSolicitacoes] = useState<SolicitacaoEnriquecida[]>([]);
   const [search, setSearch] = useState("");
   const [activeStatus, setActiveStatus] = useState<StatusFilter>("todas");
   const [processando, setProcessando] = useState(false);
 
   const [modalRecusaVisible, setModalRecusaVisible] = useState(false);
-  const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState<SolicitacaoComId | null>(null);
+  const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState<SolicitacaoEnriquecida | null>(null);
   const [motivoSelecionado, setMotivoSelecionado] = useState<MotivoRecusa | null>(null);
 
   const carregarDados = useCallback(async () => {
     if (!user || !db) {
       setIsDoador(false);
-      setLoading(false);
+      stopLoading();
       return;
     }
 
@@ -290,17 +302,31 @@ export default function SolicitacoesRecebidasScreen() {
 
       if (doador) {
         const dados = await buscarSolicitacoesRecebidasDoDoador(user.uid);
-        setSolicitacoes(dados);
+        const enriched = await Promise.all(
+          dados.map(async (sol) => {
+            const doacaoSnap = sol.doacaoId
+              ? await getDoc(doc(db!, "donations", sol.doacaoId))
+              : null;
+            const doacao = doacaoSnap?.exists() ? doacaoSnap.data() : null;
+            return {
+              ...sol,
+              doacaoTitulo: doacao?.tipoAlimento ?? sol.doacaoTitulo,
+              doacaoFotoUrl: (doacao?.fotos as { secureUrl: string }[] | null)?.[0]?.secureUrl ?? null,
+            } as SolicitacaoEnriquecida;
+          })
+        );
+        setSolicitacoes(enriched);
       }
     } catch {
       setIsDoador(false);
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   }, [user]);
 
   useEffect(() => {
     if (initializing) return;
+    startLoading();
     carregarDados();
   }, [initializing, carregarDados]);
 
@@ -363,7 +389,7 @@ export default function SolicitacoesRecebidasScreen() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return solicitacoes.filter((item) => {
-      const matchesStatus = activeStatus === "todas" ? true : item.status === activeStatus;
+      const matchesStatus = activeStatus === "todas" ? true : normalizeStatus(item.status) === activeStatus;
       if (!matchesStatus) return false;
       if (!term) return true;
       return (
@@ -375,23 +401,10 @@ export default function SolicitacoesRecebidasScreen() {
   }, [search, activeStatus, solicitacoes]);
 
   const totals = useMemo(() => ({
-    pendentes: solicitacoes.filter((s) => s.status === "pendente").length,
-    aceitas: solicitacoes.filter((s) => s.status === "aceita").length,
-    recusadas: solicitacoes.filter((s) => s.status === "recusada").length,
+    em_analise: solicitacoes.filter((s) => normalizeStatus(s.status) === "em_analise").length,
+    aprovadas: solicitacoes.filter((s) => normalizeStatus(s.status) === "aprovada").length,
+    rejeitadas: solicitacoes.filter((s) => normalizeStatus(s.status) === "rejeitada").length,
   }), [solicitacoes]);
-
-  if (initializing || loading) {
-    return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#050807]">
-        <StatusBar style="light" />
-        <LinearGradient
-          colors={["rgba(101,201,15,0.12)", "rgba(5,8,7,0)"]}
-          style={absoluteFill}
-        />
-        <ActivityIndicator size="large" color="#65C90F" />
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView className="flex-1 bg-[#050807]">
@@ -434,16 +447,16 @@ export default function SolicitacoesRecebidasScreen() {
             <View className="px-5">
               <View className="mb-5 flex-row gap-3">
                 <View className="flex-1 rounded-[18px] border border-white/5 bg-[#101514] px-4 py-3">
-                  <Text className="text-[11px] font-medium uppercase tracking-[0.4px] text-[#FACC15]">Pendentes</Text>
-                  <Text className="mt-1 text-[22px] font-semibold text-white">{totals.pendentes}</Text>
+                  <Text className="text-[11px] font-medium uppercase tracking-[0.4px] text-[#FACC15]">Em análise</Text>
+                  <Text className="mt-1 text-[22px] font-semibold text-white">{totals.em_analise}</Text>
                 </View>
                 <View className="flex-1 rounded-[18px] border border-white/5 bg-[#101514] px-4 py-3">
-                  <Text className="text-[11px] font-medium uppercase tracking-[0.4px] text-[#7DE11B]">Aceitas</Text>
-                  <Text className="mt-1 text-[22px] font-semibold text-white">{totals.aceitas}</Text>
+                  <Text className="text-[11px] font-medium uppercase tracking-[0.4px] text-[#7DE11B]">Aprovadas</Text>
+                  <Text className="mt-1 text-[22px] font-semibold text-white">{totals.aprovadas}</Text>
                 </View>
                 <View className="flex-1 rounded-[18px] border border-white/5 bg-[#101514] px-4 py-3">
-                  <Text className="text-[11px] font-medium uppercase tracking-[0.4px] text-[#F87171]">Recusadas</Text>
-                  <Text className="mt-1 text-[22px] font-semibold text-white">{totals.recusadas}</Text>
+                  <Text className="text-[11px] font-medium uppercase tracking-[0.4px] text-[#F87171]">Rejeitadas</Text>
+                  <Text className="mt-1 text-[22px] font-semibold text-white">{totals.rejeitadas}</Text>
                 </View>
               </View>
 

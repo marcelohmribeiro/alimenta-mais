@@ -1,6 +1,7 @@
 import { DonationCard } from "@/components";
 import { Box, Button, ButtonText, HStack, Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader, Text } from "@/components/ui";
 import { listarDoacoes } from "@/services";
+import { useLoading } from "@/store";
 import { DonationDocumentWithId, DonationStatus } from "@/types";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -8,7 +9,6 @@ import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   ScrollView,
   TextInput,
   TouchableOpacity,
@@ -34,8 +34,8 @@ export default function Home() {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todas");
+  const { startLoading, stopLoading } = useLoading();
   const [donations, setDonations] = useState<DonationDocumentWithId[]>([]);
-  const [loadingDonations, setLoadingDonations] = useState(true);
   const [donationsError, setDonationsError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,8 +46,8 @@ export default function Home() {
     let active = true;
 
     const loadDonations = async () => {
+      startLoading();
       try {
-        setLoadingDonations(true);
         setDonationsError(null);
         const data = await listarDoacoes();
         if (active) setDonations(data);
@@ -58,7 +58,7 @@ export default function Home() {
           setDonations([]);
         }
       } finally {
-        if (active) setLoadingDonations(false);
+        if (active) stopLoading();
       }
     };
 
@@ -198,12 +198,7 @@ export default function Home() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 100 }}
         >
-          {loadingDonations ? (
-            <Box className="items-center justify-center mt-20">
-              <ActivityIndicator color="#65A30D" size="large" />
-              <Text className="text-[#A1A1AA] text-center mt-4">Carregando doações...</Text>
-            </Box>
-          ) : filteredDonations.length > 0 ? (
+          {filteredDonations.length > 0 ? (
             filteredDonations.map((item) => (
               <DonationCard
                 key={item.id}

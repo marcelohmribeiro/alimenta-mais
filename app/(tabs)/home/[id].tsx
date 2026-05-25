@@ -4,8 +4,9 @@ import {
   buscarDoacao,
   buscarPerfilUsuario,
   FirestoreServiceError,
-  reivindicarDoacao,
+  solicitarDoacao,
 } from "@/services";
+import { useLoading } from "@/store";
 import { UserProfile } from "@/types";
 import { formatarData, formatarHorario } from "@/utils";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
@@ -50,8 +51,8 @@ export default function DonationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
 
+  const { startLoading, stopLoading } = useLoading();
   const [donation, setDonation] = useState<Awaited<ReturnType<typeof buscarDoacao>>>(null);
-  const [loading, setLoading] = useState(true);
   const [donorProfile, setDonorProfile] = useState<UserProfile | null>(null);
   const [loadingDonor, setLoadingDonor] = useState(false);
   const [dataAgendada, setDataAgendada] = useState("");
@@ -61,17 +62,19 @@ export default function DonationDetailScreen() {
 
   useEffect(() => {
     if (!id) return;
-    buscarDoacao(id).then((data) => {
-      setDonation(data);
-      setLoading(false);
-      if (data?.donorId) {
-        setLoadingDonor(true);
-        buscarPerfilUsuario(data.donorId)
-          .then(setDonorProfile)
-          .finally(() => setLoadingDonor(false));
-      }
-    });
-  }, [id]);
+    startLoading();
+    buscarDoacao(id)
+      .then((data) => {
+        setDonation(data);
+        if (data?.donorId) {
+          setLoadingDonor(true);
+          buscarPerfilUsuario(data.donorId)
+            .then(setDonorProfile)
+            .finally(() => setLoadingDonor(false));
+        }
+      })
+      .finally(stopLoading);
+  }, [id, startLoading, stopLoading]);
 
   const handleReivindicar = async () => {
     if (!user) {
@@ -82,9 +85,23 @@ export default function DonationDetailScreen() {
 
     setReivindicando(true);
     try {
-      await reivindicarDoacao(donation.id, user.uid, dataAgendada, horarioAgendado);
+      await solicitarDoacao(
+        donation.id,
+        user.uid,
+        {
+          titulo: donation.tipoAlimento,
+          quantidade: donation.quantidade,
+          validade: donation.validade,
+          categoria: donation.categoria,
+          doadorId: donation.donorId ?? "",
+          solicitanteNome: user.displayName ?? user.email ?? "Usuário",
+          solicitanteAvatar: user.photoURL ?? null,
+        },
+        dataAgendada,
+        horarioAgendado,
+      );
       setDonation((prev) =>
-        prev ? { ...prev, status: "em análise", reivindicadoPor: user.uid, dataAgendada, horarioAgendado } : prev
+        prev ? { ...prev, status: "indisponivel", reivindicadoPor: user.uid, dataAgendada, horarioAgendado } : prev
       );
       Alert.alert("Sucesso!", "Doação reivindicada com sucesso.", [
         { text: "OK", onPress: () => router.back() },
@@ -102,7 +119,7 @@ export default function DonationDetailScreen() {
 
   const firstPhoto = donation?.fotos?.[0]?.secureUrl ?? null;
   const canClaim = donation?.status === "disponivel";
-  const isClaimed = donation?.status === "em análise";
+  const isClaimed = donation?.status === "indisponivel";
   const tipoRetiradaLabel =
     donation?.tipoRetirada === "doador" ? "Entrega pelo doador" : "Retirada pelo receptor";
   const tipoRetiradaIcon = donation?.tipoRetirada === "doador" ? "truck" : "walking";
@@ -116,15 +133,11 @@ export default function DonationDetailScreen() {
           <FontAwesome5 name="arrow-left" size={18} color="#A1A1AA" />
         </TouchableOpacity>
         <Text className="text-white text-lg font-bold flex-1" numberOfLines={1}>
-          {loading ? "Carregando..." : (donation?.tipoAlimento ?? "Doação")}
+          {donation?.tipoAlimento ?? "Doação"}
         </Text>
       </HStack>
 
-      {loading ? (
-        <Box className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#65A30D" size="large" />
-        </Box>
-      ) : !donation ? (
+      {!donation ? (
         <Box className="flex-1 items-center justify-center px-8">
           <Text className="text-white text-lg font-semibold mb-2">Doação não encontrada</Text>
           <Text className="text-[#71717A] text-center">Esta doação pode ter sido removida.</Text>

@@ -1,4 +1,5 @@
 import useAuth from "@/hooks/_useAuth";
+import { useLoading } from "@/store";
 import {
   CloudinaryServiceError,
   FirestoreServiceError,
@@ -30,7 +31,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const GREEN = "#65C90F";
 
 export default function DoarScreen() {
-  const { user, initializing } = useAuth();
+  const { user } = useAuth();
   const [fotos, setFotos] = useState<DonationPhotoInput[]>([]);
   const [nomeAlimento, setNomeAlimento] = useState("");
   const [categoria, setCategoria] = useState("Prontos");
@@ -45,18 +46,19 @@ export default function DoarScreen() {
   const [endereco, setEndereco] = useState("");
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [validandoDoador, setValidandoDoador] = useState(true);
+  const { startLoading, stopLoading } = useLoading();
   const [ehDoador, setEhDoador] = useState(false);
 
   useEffect(() => {
     const verificarDoador = async () => {
+      startLoading();
       try {
         setEhDoador(await verificarSeUsuarioEhDoador(user?.uid));
       } catch (error) {
         console.log("ERRO AO VALIDAR DOADOR:", error);
         setEhDoador(false);
       } finally {
-        setValidandoDoador(false);
+        stopLoading();
       }
     };
 
@@ -168,13 +170,6 @@ export default function DoarScreen() {
     }
   };
 
-  if (initializing || validandoDoador) {
-    return (
-      <SafeAreaView className="flex-1 bg-[#0B0F0C] items-center justify-center">
-        <ActivityIndicator color="#65C90F" size="large" />
-      </SafeAreaView>
-    );
-  }
 
   if (!ehDoador) {
     return (

@@ -1,15 +1,17 @@
 import useAuth from "@/hooks/_useAuth";
 import { db } from "@/services";
+import { useLoading } from "@/store";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
   collection,
+  doc,
+  getDoc,
   getDocs,
   query,
   where,
 } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   RefreshControl,
@@ -63,12 +65,20 @@ const filtrosReceptor = [
 const normalizarStatus = (status?: string) => {
   const value = String(status || "").trim().toLowerCase();
 
-  if (["em analise", "em_análise", "em análise", "pendente"].includes(value)) {
+  if (["em analise", "em_análise", "em análise", "pendente", "em_analise"].includes(value)) {
     return "em_analise";
   }
 
-  if (["aprovado", "aprovada", "reivindicada", "reivindicado"].includes(value)) {
+  if (["aprovado", "aprovada"].includes(value)) {
     return "aprovado";
+  }
+
+  if (["rejeitado", "rejeitada"].includes(value)) {
+    return "rejeitado";
+  }
+
+  if (["cancelado", "cancelada"].includes(value)) {
+    return "cancelado";
   }
 
   if (["disponivel", "disponível"].includes(value)) {
@@ -146,7 +156,7 @@ export default function HistoricoDoacoes() {
   const [filtro, setFiltro] = useState("todos");
   const [doacoesDoador, setDoacoesDoador] = useState<DonationHistory[]>([]);
   const [doacoesReceptor, setDoacoesReceptor] = useState<DonationHistory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { startLoading, stopLoading } = useLoading();
   const [refreshing, setRefreshing] = useState(false);
 
   const filtros = aba === "doador" ? filtrosDoador : filtrosReceptor;
@@ -155,50 +165,86 @@ export default function HistoricoDoacoes() {
     if (!user?.uid || !db) {
       setDoacoesDoador([]);
       setDoacoesReceptor([]);
-      setLoading(false);
+      stopLoading();
       return;
     }
 
     try {
       const donationsRef = collection(db, "donations");
+      const solicitacoesRef = collection(db, "solicitacoes");
 
-      const doadorQuery = query(
-        donationsRef,
-        where("donorId", "==", user.uid)
-      );
+      const [doadorDonationsSnap, doadorSolicitacoesSnap, receptorSolicitacoesSnap] =
+        await Promise.all([
+          getDocs(query(donationsRef, where("donorId", "==", user.uid))),
+          getDocs(query(solicitacoesRef, where("doadorId", "==", user.uid))),
+          getDocs(query(solicitacoesRef, where("solicitanteId", "==", user.uid))),
+        ]);
 
-      const receptorQuery = query(
-        donationsRef,
-        where("reivindicadoPor", "==", user.uid)
-      );
+      // mapa doacaoId → status mais recente da solicitação
+      const solicitacaoStatusMap = new Map<string, string>();
+      doadorSolicitacoesSnap.docs.forEach((docItem) => {
+        const data = docItem.data();
+        const existing = solicitacaoStatusMap.get(data.doacaoId);
+        // prefere status ativo (pendente/aprovada) sobre rejeitada
+        if (!existing || data.status !== "rejeitada") {
+          solicitacaoStatusMap.set(data.doacaoId, data.status);
+        }
+      });
 
-      const doadorSnap = await getDocs(doadorQuery);
-      const receptorSnap = await getDocs(receptorQuery);
+      const sortByDate = (a: DonationHistory, b: DonationHistory) =>
+        (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0);
 
-      const parseDocs = (snap: any) =>
-        snap.docs
-          .map((docItem: any) => ({
-            id: docItem.id,
-            ...docItem.data(),
-          }))
-          .sort((a: DonationHistory, b: DonationHistory) => {
-            const aDate = a.createdAt?.toMillis?.() ?? 0;
-            const bDate = b.createdAt?.toMillis?.() ?? 0;
-            return bDate - aDate;
-          });
+      // aba doador: todas as doações + status real da solicitação
+      const doadorHistory: DonationHistory[] = doadorDonationsSnap.docs
+        .map((docItem) => ({
+          id: docItem.id,
+          ...(docItem.data() as Omit<DonationHistory, "id">),
+          status: solicitacaoStatusMap.get(docItem.id) ?? docItem.data().status,
+        }))
+        .sort(sortByDate);
 
-      setDoacoesDoador(parseDocs(doadorSnap));
-      setDoacoesReceptor(parseDocs(receptorSnap));
+      // aba receptor: solicitações feitas pelo usuário + dados completos da doação
+      const receptorHistory: DonationHistory[] = (
+        await Promise.all(
+          receptorSolicitacoesSnap.docs.map(async (docItem) => {
+            const sol = docItem.data();
+            const doacaoSnap = sol.doacaoId
+              ? await getDoc(doc(db!, "donations", sol.doacaoId))
+              : null;
+            const doacao = doacaoSnap?.exists() ? doacaoSnap.data() : null;
+
+            return {
+              id: docItem.id,
+              tipoAlimento: doacao?.tipoAlimento ?? sol.doacaoTitulo,
+              categoria: doacao?.categoria ?? sol.doacaoCategoria,
+              quantidade: doacao?.quantidade ?? sol.doacaoQuantidade,
+              validade: doacao?.validade ?? sol.doacaoValidade,
+              localizacao: doacao?.localizacao,
+              dataRetirada: doacao?.dataRetirada,
+              horarioInicio: doacao?.horarioInicio,
+              horarioFim: doacao?.horarioFim,
+              tipoRetirada: doacao?.tipoRetirada,
+              fotos: doacao?.fotos,
+              status: sol.status,
+              createdAt: sol.criadoEm,
+            } as DonationHistory;
+          }),
+        )
+      ).sort(sortByDate);
+
+      setDoacoesDoador(doadorHistory);
+      setDoacoesReceptor(receptorHistory);
     } catch (error) {
       console.log("ERRO AO CARREGAR HISTÓRICO:", error);
     } finally {
-      setLoading(false);
+      stopLoading();
       setRefreshing(false);
     }
   }, [user?.uid]);
 
   useEffect(() => {
     if (initializing) return;
+    startLoading();
     carregarHistorico();
   }, [initializing, carregarHistorico]);
 
@@ -214,14 +260,6 @@ export default function HistoricoDoacoes() {
     setRefreshing(true);
     carregarHistorico();
   };
-
-  if (initializing || loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-[#050807] items-center justify-center">
-        <ActivityIndicator color={GREEN} size="large" />
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView className="flex-1 bg-[#050807]">

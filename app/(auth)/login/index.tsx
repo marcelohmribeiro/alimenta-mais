@@ -1,4 +1,5 @@
 import { SocialLoginButton } from "@/components";
+import { useLoading } from "@/store";
 import ForgotPasswordDialog from "@/components/forgot-password-dialog";
 import {
   getAuthAlertData,
@@ -30,25 +31,26 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { startLoading, stopLoading, loading: loadingCount } = useLoading();
+  const isLoading = loadingCount > 0;
 
   const handleLogin = async () => {
     try {
-      setLoading(true);
+      startLoading();
       await loginWithEmail(email, password);
       router.replace("/(tabs)/home");
     } catch (error) {
       const { title, message } = getAuthAlertData(error, "Erro no login");
       Alert.alert(title, message);
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   };
 
   const handlePasswordReset = async (email: string) => {
     try {
       console.log(email, "email");
-      setLoading(true);
+      startLoading();
       await resetPassword(email);
       Alert.alert(
         "E-mail enviado",
@@ -58,7 +60,7 @@ export default function Login() {
       const { title, message } = getAuthAlertData(error, "Erro");
       Alert.alert(title, message);
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   };
 
@@ -71,14 +73,14 @@ export default function Login() {
 
   const handleGoogleLogin = async () => {
     try {
-      setLoading(true);
+      startLoading();
       await loginWithGoogle();
       router.replace("/(tabs)/home");
     } catch (error) {
       const { title, message } = getAuthAlertData(error, "Erro no Google");
       Alert.alert(title, message);
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   };
 
@@ -150,7 +152,7 @@ export default function Login() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!loading}
+                  editable={!isLoading}
                   className="flex-1 text-white ml-3 text-[16px] font-normal"
                   style={{ fontFamily: "System" }}
                 />
@@ -174,16 +176,16 @@ export default function Login() {
                   placeholder="Digite sua senha"
                   placeholderTextColor="#71717A"
                   secureTextEntry={!show}
-                  editable={!loading}
+                  editable={!isLoading}
                   className="flex-1 text-white ml-3 mr-2 text-[16px] font-normal"
                   style={{ fontFamily: "System" }}
                 />
                 <Pressable
                   onPress={() => setShow((current) => !current)}
-                  disabled={loading}
+                  disabled={isLoading}
                   hitSlop={10}
                   style={({ pressed }) => ({
-                    opacity: pressed && !loading ? 0.72 : 1,
+                    opacity: pressed && !isLoading ? 0.72 : 1,
                   })}
                 >
                   <Ionicons
@@ -194,21 +196,21 @@ export default function Login() {
                 </Pressable>
               </View>
               <ForgotPasswordDialog
-                loading={loading}
+                loading={isLoading}
                 onSuccessCallback={handlePasswordReset}
               />
 
               <Pressable
                 className="mt-4"
-                disabled={loading}
+                disabled={isLoading}
                 onPress={handleLogin}
                 style={({ pressed }) => ({
-                  opacity: pressed && !loading ? 0.88 : 1,
+                  opacity: pressed && !isLoading ? 0.88 : 1,
                 })}
               >
                 <LinearGradient
                   colors={
-                    loading ? ["#3F7F2C", "#2B641F"] : ["#5ED62A", "#33A61A"]
+                    isLoading ? ["#3F7F2C", "#2B641F"] : ["#5ED62A", "#33A61A"]
                   }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -219,7 +221,7 @@ export default function Login() {
                     justifyContent: "center",
                   }}
                 >
-                  {loading ? (
+                  {isLoading ? (
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
                     <Text
@@ -245,7 +247,7 @@ export default function Login() {
 
               <SocialLoginButton
                 label="Entrar com Google"
-                disabled={loading}
+                disabled={isLoading}
                 onPress={handleGoogleLogin}
                 className="mb-4"
                 icon={

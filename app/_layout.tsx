@@ -1,12 +1,14 @@
 import "@/styles/global.css";
+import { LoadingProvider } from "@/components/_loading";
+import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import { Slot } from "expo-router";
-
-import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 
 const RootLayout = () => {
   return (
     <GluestackUIProvider mode="dark">
-      <Slot />
+      <LoadingProvider>
+        <Slot />
+      </LoadingProvider>
     </GluestackUIProvider>
   );
 };

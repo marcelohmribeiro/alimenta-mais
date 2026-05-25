@@ -2,10 +2,8 @@ import type { ImagePickerAsset } from "expo-image-picker";
 
 export type DonationStatus =
   | "disponivel"
-  | "em análise"
-  | "aprovado"
-  | "cancelada"
-  | "rejeitada";
+  | "indisponivel"
+  | "cancelada";
 
 export type RequestStatus =
   | "pendente"
@@ -155,7 +153,7 @@ export type ParsedCloudinaryResponse = {
   rawText: string;
 };
 
-export type SolicitacaoStatus = "pendente" | "aceita" | "recusada";
+export type SolicitacaoStatus = "em_analise" | "aprovada" | "rejeitada";
 
 export type MotivoRecusa =
   | "Alimento venceu"
