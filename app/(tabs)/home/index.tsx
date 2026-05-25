@@ -204,10 +204,30 @@ export default function Home() {
       );
       return;
     }
-
+  
+    const doacao = donations.find((d) => d.id === donationId);
+  
+    if (!doacao) {
+      Alert.alert("Erro", "Doação não encontrada.");
+      return;
+    }
+  
+    if (doacao.donorId === user.uid) {
+      Alert.alert("Atenção", "Você não pode reivindicar sua própria doação.");
+      return;
+    }
+  
     setReivindicandoId(donationId);
     try {
-      await reivindicarDoacao(donationId, user.uid);
+      await reivindicarDoacao(donationId, user.uid, {
+        titulo: doacao.tipoAlimento,
+        quantidade: doacao.quantidade,
+        validade: doacao.validade,
+        categoria: doacao.categoria,
+        doadorId: doacao.donorId ?? "",
+        solicitanteNome: user.displayName ?? user.email ?? "Usuário",
+        solicitanteAvatar: user.photoURL ?? null,
+      });
       setDonations((prev) =>
         prev.map((d) =>
           d.id === donationId
