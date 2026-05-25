@@ -103,6 +103,14 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="home/[id]"
+        options={{
+          href: null,
+          title: "Detalhes",
+        }}
+      />
+
+      <Tabs.Screen
         name="become-donor/index"
         options={{
           href: null,
