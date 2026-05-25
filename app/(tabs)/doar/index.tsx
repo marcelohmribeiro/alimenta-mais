@@ -131,6 +131,8 @@ export default function DoarScreen() {
 
     try {
       setLoading(true);
+      console.log("USUARIO:", user);
+      console.log("INICIANDO SALVAMENTO");
 
       await salvarDoacao({
         userId: user?.uid ?? null,
@@ -147,7 +149,7 @@ export default function DoarScreen() {
         horarioFim,
         endereco,
       });
-
+      console.log("SALVOU COM SUCESSO");
       limparFormulario();
 
       Alert.alert("Sucesso", "Doação cadastrada com sucesso!");
@@ -421,37 +423,34 @@ export default function DoarScreen() {
             </Section>
 
             <Pressable
-              disabled={loading}
-              onPress={handleSalvarDoacao}
-              className="mt-2"
-            >
-              <LinearGradient
-                colors={loading ? ["#3F7F2C", "#2B641F"] : ["#65C90F", "#4CAF0D"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  height: 62,
-                  borderRadius: 20,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <View className="flex-row items-center">
-                    <MaterialCommunityIcons
-                      name="gift-outline"
-                      size={25}
-                      color="#FFFFFF"
-                    />
-                    <Text className="text-white text-[20px] font-bold ml-3">
-                      Cadastrar doação
-                    </Text>
-                  </View>
-                )}
-              </LinearGradient>
-            </Pressable>
+  disabled={loading}
+  onPress={() => {
+    console.log("CLICOU NO BOTÃO");
+    handleSalvarDoacao();
+  }}
+  style={{
+    marginTop: 8,
+    height: 62,
+    borderRadius: 20,
+    backgroundColor: "#65C90F",
+    alignItems: "center",
+    justifyContent: "center",
+  }}
+>
+  {loading ? (
+    <ActivityIndicator color="#FFFFFF" />
+  ) : (
+    <Text
+      style={{
+        color: "#081106",
+        fontSize: 20,
+        fontWeight: "bold",
+      }}
+    >
+      Cadastrar doação
+    </Text>
+  )}
+</Pressable>
 
             <View className="flex-row justify-center items-center mt-4">
               <MaterialCommunityIcons name="lock-outline" size={16} color={GREEN} />
