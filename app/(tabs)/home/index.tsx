@@ -109,7 +109,7 @@ const DonationCard = ({
           )}
         </Box>
       </TouchableOpacity>
-    ) : status === "reivindicada" ? (
+    ) : status === "em análise" ? (
       <Box className="mt-3 bg-[#27272A] rounded-2xl h-10 items-center justify-center">
         <Text className="text-[#71717A] text-sm">Já reivindicada</Text>
       </Box>
@@ -211,7 +211,7 @@ export default function Home() {
       setDonations((prev) =>
         prev.map((d) =>
           d.id === donationId
-            ? { ...d, status: "reivindicada", reivindicadoPor: user.uid }
+            ? { ...d, status: "em análise", reivindicadoPor: user.uid }
             : d
         )
       );
