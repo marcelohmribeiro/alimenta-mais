@@ -44,9 +44,10 @@ type DonationCardItem = {
   category: string;
   imageUri?: string | null;
   status: DonationStatus;
+  donorId: string | null;
 };
 
-type DonationCardProps = Omit<DonationCardItem, "id" | "category"> & {
+type DonationCardProps = Omit<DonationCardItem, "id" | "category" | "donorId"> & {
   onReivindicar?: () => void;
   reivindicando?: boolean;
 };
@@ -78,13 +79,11 @@ const DonationCard = ({
 
         <HStack className="flex-row items-center mb-1">
           <FontAwesome5 name="map-marker-alt" size={12} color="#65A30D" />
-
           <Text className="text-[#A1A1AA] text-[13px] ml-2">{distance}</Text>
         </HStack>
 
         <HStack className="flex-row items-center">
           <FontAwesome5 name="clock" size={12} color="#65A30D" />
-
           <Text className="text-[#A1A1AA] text-[13px] ml-2">
             Validade: {date}
           </Text>
@@ -109,7 +108,7 @@ const DonationCard = ({
           )}
         </Box>
       </TouchableOpacity>
-    ) : status === "reivindicada" ? (
+    ) : status === "em análise" ? (
       <Box className="mt-3 bg-[#27272A] rounded-2xl h-10 items-center justify-center">
         <Text className="text-[#71717A] text-sm">Já reivindicada</Text>
       </Box>
@@ -120,7 +119,7 @@ const DonationCard = ({
 export default function Home() {
   const { user } = useAuth();
   const [showLocationModal, setShowLocationModal] = useState(false);
-  
+
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todas");
   const [donations, setDonations] = useState<DonationDocumentWithId[]>([]);
@@ -166,10 +165,7 @@ export default function Home() {
 
   const checkLocationPermission = async () => {
     try {
-      const alreadyAccepted = await AsyncStorage.getItem(
-        LOCATION_PERMISSION_KEY,
-      );
-
+      const alreadyAccepted = await AsyncStorage.getItem(LOCATION_PERMISSION_KEY);
       const { status } = await Location.getForegroundPermissionsAsync();
 
       if (alreadyAccepted === "true" || status === "granted") {
@@ -188,7 +184,6 @@ export default function Home() {
 
       if (status === "granted") {
         await AsyncStorage.setItem(LOCATION_PERMISSION_KEY, "true");
-
         setShowLocationModal(false);
       }
     } catch (error) {
@@ -205,13 +200,33 @@ export default function Home() {
       return;
     }
 
+    const doacao = donations.find((d) => d.id === donationId);
+
+    if (!doacao) {
+      Alert.alert("Erro", "Doação não encontrada.");
+      return;
+    }
+
+    if (doacao.donorId === user.uid) {
+      Alert.alert("Atenção", "Você não pode reivindicar sua própria doação.");
+      return;
+    }
+
     setReivindicandoId(donationId);
     try {
-      await reivindicarDoacao(donationId, user.uid);
+      await reivindicarDoacao(donationId, user.uid, {
+        titulo: doacao.tipoAlimento,
+        quantidade: doacao.quantidade,
+        validade: doacao.validade,
+        categoria: doacao.categoria,
+        doadorId: doacao.donorId ?? "",
+        solicitanteNome: user.displayName ?? user.email ?? "Usuário",
+        solicitanteAvatar: user.photoURL ?? null,
+      });
       setDonations((prev) =>
         prev.map((d) =>
           d.id === donationId
-            ? { ...d, status: "reivindicada", reivindicadoPor: user.uid }
+            ? { ...d, status: "em análise", reivindicadoPor: user.uid }
             : d
         )
       );
@@ -248,6 +263,7 @@ export default function Home() {
         category: donation.categoria,
         imageUri: donation.fotos?.[0]?.secureUrl ?? null,
         status: donation.status,
+        donorId: donation.donorId,
       })),
     [donations]
   );
@@ -272,18 +288,14 @@ export default function Home() {
   return (
     <SafeAreaView className="flex-1 bg-[#0B0F0C]">
       <Box className="flex-1 bg-[#09090B] pt-12 px-4">
-        {/* Header */}
         <HStack className="flex-row items-center justify-between mb-6">
-          <Text className="text-white text-2xl font-bold">
-            Doações
-          </Text>
+          <Text className="text-white text-2xl font-bold">Doações</Text>
 
           <Box className="bg-[#1E3A0A] w-10 h-10 rounded-full items-center justify-center">
             <FontAwesome5 name="seedling" size={16} color="#84CC16" />
           </Box>
         </HStack>
 
-        {/* Search */}
         <HStack className="flex-row items-center mb-6">
           <Box className="flex-1 flex-row items-center bg-black/30 rounded-2xl px-4 h-12 border border-[#27272A]">
             <FontAwesome5 name="search" size={16} color="#A1A1AA" />
@@ -301,7 +313,6 @@ export default function Home() {
             />
           </Box>
 
-          {/* Botão limpar filtro */}
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch("")}>
               <Box className="ml-3 bg-[#1C1C1E] rounded-2xl w-12 h-12 items-center justify-center">
@@ -311,48 +322,41 @@ export default function Home() {
           )}
         </HStack>
 
-        {/* Categories */}
         <Box className="h-12 mb-4">
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {categories.map((cat) => {
-              return (
-                <TouchableOpacity
-                  key={cat}
-                  onPress={() => setSelectedCategory(cat)}
-                  activeOpacity={0.8}
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                onPress={() => setSelectedCategory(cat)}
+                activeOpacity={0.8}
+              >
+                <Button
+                  className={`${
+                    selectedCategory === cat ? "bg-[#1E3A0A]" : "bg-[#27272A]"
+                  } mr-2 px-6 rounded-xl h-10 border-0 items-center justify-center`}
                 >
-                  <Button
+                  <ButtonText
                     className={`${
-                      selectedCategory === cat ? "bg-[#1E3A0A]" : "bg-[#27272A]"
-                    } mr-2 px-6 rounded-xl h-10 border-0 items-center justify-center`}
+                      selectedCategory === cat
+                        ? "text-[#84CC16] font-bold"
+                        : "text-gray-300"
+                    } text-center text-sm`}
                   >
-                    <ButtonText
-                      className={`${
-                        selectedCategory === cat
-                          ? "text-[#84CC16] font-bold"
-                          : "text-gray-300"
-                      } text-center text-sm`}
-                    >
-                      {cat}
-                    </ButtonText>
-                  </Button>
-                </TouchableOpacity>
-              );
-            })}
+                    {cat}
+                  </ButtonText>
+                </Button>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
         </Box>
 
-        {/* Resultados */}
         <Text className="text-[#71717A] mb-4 text-sm">
           {filteredDonations.length} doação(ões) encontrada(s)
         </Text>
 
-        {/* Donation List */}
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: 100,
-          }}
+          contentContainerStyle={{ paddingBottom: 100 }}
         >
           {loadingDonations ? (
             <Box className="items-center justify-center mt-20">
@@ -395,7 +399,6 @@ export default function Home() {
         </ScrollView>
       </Box>
 
-      {/* Modal localização */}
       <Modal isOpen={showLocationModal}>
         <ModalBackdrop />
 
