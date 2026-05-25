@@ -1,7 +1,6 @@
 import useAuth from "@/hooks/_useAuth";
 import { db } from "@/services";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { router } from "expo-router";
 import {
   collection,
   getDocs,

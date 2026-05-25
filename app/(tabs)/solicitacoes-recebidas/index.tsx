@@ -8,7 +8,6 @@ import {
 } from "@/services";
 import { MotivoRecusa, SolicitacaoComId, SolicitacaoStatus, UserProfile } from "@/types";
 import Feather from "@expo/vector-icons/Feather";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -408,9 +407,7 @@ export default function SolicitacoesRecebidasScreen() {
 
       <View className="px-5 pt-3">
         <View className="mb-5 flex-row items-center justify-between">
-          <Pressable onPress={() => router.back()} hitSlop={12} className="h-10 w-10 items-center justify-center">
-            <Ionicons name="chevron-back" size={26} color="#FFFFFF" />
-          </Pressable>
+          <View className="h-10 w-10" />
           <Text className="text-[18px] font-semibold text-white">
             Solicitações recebidas
           </Text>

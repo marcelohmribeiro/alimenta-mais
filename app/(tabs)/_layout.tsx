@@ -61,7 +61,7 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="conversas/index"
+        name="historico/index"
         options={{
           title: "Histórico",
           tabBarIcon: ({ color }) => (
@@ -99,6 +99,14 @@ export default function TabLayout() {
               color={color}
             />
           ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="home/[id]"
+        options={{
+          href: null,
+          title: "Detalhes",
         }}
       />
 

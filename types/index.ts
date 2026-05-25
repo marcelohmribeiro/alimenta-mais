@@ -31,6 +31,8 @@ export type Donation = {
   status: DonationStatus;
   donorId: string | null;
   reivindicadoPor?: string | null;
+  dataAgendada?: string;
+  horarioAgendado?: string;
   createdAt: unknown;
 };
 
