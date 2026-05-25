@@ -7,6 +7,16 @@ export type DonationStatus =
   | "cancelada"
   | "rejeitada";
 
+export type RequestStatus =
+  | "pendente"
+  | "aceita"
+  | "recusada"
+  | "retirada_agendada"
+  | "concluida"
+  | "cancelada";
+
+export type PickupScheduleStatus = "agendada" | "concluida" | "cancelada";
+
 export type Donation = {
   tipoAlimento: string;
   quantidade: string;
@@ -84,6 +94,41 @@ export type DonationDocument = Donation & {
 
 export type DonationDocumentWithId = DonationDocument & {
   id: string;
+};
+
+export type DonationRequestDocument = {
+  donationId: string;
+  donorId: string;
+  requesterId: string;
+  status: RequestStatus;
+  criadoEm?: unknown;
+  atualizadoEm?: unknown;
+};
+
+export type DonationRequestDocumentWithId = DonationRequestDocument & {
+  id: string;
+};
+
+export type PickupScheduleDocument = {
+  donationId: string;
+  requestId: string;
+  donorId: string;
+  requesterId: string;
+  dataRetirada: string;
+  horarioRetirada: string;
+  observacao: string;
+  status: PickupScheduleStatus;
+  criadoEm: unknown;
+};
+
+export type AppNotificationDocument = {
+  userId: string;
+  tipo: string;
+  titulo: string;
+  mensagem: string;
+  referenciaId: string;
+  lida: boolean;
+  criadoEm: unknown;
 };
 
 export type CloudinaryUploadOptions = {
