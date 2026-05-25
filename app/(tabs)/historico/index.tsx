@@ -1,7 +1,8 @@
 import useAuth from "@/hooks/_useAuth";
 import { db } from "@/services";
-import { useLoading } from "@/store";
+import { useLoading, useUser } from "@/store";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { router } from "expo-router";
 import {
   collection,
   doc,
@@ -17,6 +18,7 @@ import {
   RefreshControl,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -152,7 +154,8 @@ const getImagem = (fotos?: any[]) => {
 export default function HistoricoDoacoes() {
   const { user, initializing } = useAuth();
 
-  const [aba, setAba] = useState<AbaHistorico>("doador");
+  const isDoador = useUser((s) => s.isDoador);
+  const [aba, setAba] = useState<AbaHistorico>("receptor");
   const [filtro, setFiltro] = useState("todos");
   const [doacoesDoador, setDoacoesDoador] = useState<DonationHistory[]>([]);
   const [doacoesReceptor, setDoacoesReceptor] = useState<DonationHistory[]>([]);
@@ -378,7 +381,28 @@ export default function HistoricoDoacoes() {
             </View>
           </View>
 
-          {doacoesFiltradas.length === 0 ? (
+          {aba === "doador" && !isDoador ? (
+            <View className="items-center justify-center rounded-[28px] border border-white/10 bg-[#101514] px-6 py-12">
+              <View className="w-16 h-16 rounded-full bg-[#18340D] items-center justify-center mb-4">
+                <MaterialCommunityIcons name="leaf" size={32} color={GREEN} />
+              </View>
+              <Text className="text-white text-[20px] font-bold text-center">
+                Você ainda não é doador
+              </Text>
+              <Text className="text-[#A3A3A3] text-center mt-2 mb-6">
+                Cadastre-se como doador para começar a doar alimentos e acompanhar seu histórico aqui.
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => router.push("/(tabs)/become-donor" as any)}
+                className="bg-[#65C90F] rounded-[18px] px-8 py-4 items-center justify-center"
+              >
+                <Text className="text-[#081106] text-[15px] font-semibold">
+                  Tornar-se doador
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : doacoesFiltradas.length === 0 ? (
             <View className="items-center justify-center rounded-[28px] border border-white/10 bg-[#101514] px-6 py-12">
               <View className="w-16 h-16 rounded-full bg-[#18340D] items-center justify-center mb-4">
                 <MaterialCommunityIcons
