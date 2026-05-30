@@ -208,7 +208,7 @@ export default function Home() {
                 date={item.date}
                 imageUri={item.imageUri}
                 status={item.status}
-                onPress={() => router.push(`/(tabs)/home/${item.id}`)}
+                onPress={() => router.push(`/(tabs)/home/${item.id}` as any)}
               />
             ))
           ) : (

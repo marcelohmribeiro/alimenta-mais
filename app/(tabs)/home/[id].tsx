@@ -10,6 +10,7 @@ import { useLoading } from "@/store";
 import { UserProfile } from "@/types";
 import { formatarData, formatarHorario } from "@/utils";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -18,14 +19,44 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
+  Switch,
   TextInput,
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const fallbackImage = require("@/assets/images/pao.jpg");
+const DONATION_TERMS_KEY = "alimenta_plus_donation_terms_accepted_v1";
+
+const TERMO_DOACAO = `Ao solicitar esta doação, você declara que:
+
+1. Origem dos Alimentos
+Você reconhece que os alimentos foram cadastrados por terceiros e que o Alimenta+ não produz, armazena, transporta nem inspeciona os itens ofertados.
+
+2. Qualidade Sanitária
+O Alimenta+ não realiza controle sanitário. Você é responsável por verificar as condições dos itens no momento da retirada e por decidir sobre o seu recebimento.
+
+3. Responsabilidade pela Retirada
+Você se compromete a comparecer ao local e horário combinados. O não comparecimento injustificado poderá impactar sua reputação na plataforma.
+
+4. Uso Adequado
+Você se compromete a utilizar os alimentos exclusivamente para consumo próprio ou finalidade social, sendo proibida a revenda ou comercialização dos itens recebidos.
+
+5. Conduta Ética
+Você concorda em agir de boa-fé, não utilizando identidade falsa, não praticando golpes e não tentando obter vantagem indevida.
+
+6. Registro da Solicitação
+A plataforma registrará os dados desta solicitação, incluindo data, horário e usuários envolvidos, para fins de segurança e auditoria.
+
+7. Limitação de Responsabilidade
+O Alimenta+ atua exclusivamente como intermediador digital e não se responsabiliza por danos decorrentes do consumo dos alimentos ou do não cumprimento de acordos entre as partes.
+
+8. Cancelamento
+Caso não possa retirar a doação, cancele a solicitação com antecedência pelo aplicativo.`;
 
 const InfoCell = ({
   icon,
@@ -58,6 +89,8 @@ export default function DonationDetailScreen() {
   const [dataAgendada, setDataAgendada] = useState("");
   const [horarioAgendado, setHorarioAgendado] = useState("");
   const [reivindicando, setReivindicando] = useState(false);
+  const [termoModalVisible, setTermoModalVisible] = useState(false);
+  const [termoAceito, setTermoAceito] = useState(false);
   const tabBarHeight = useBottomTabBarHeight();
 
   useEffect(() => {
@@ -76,12 +109,34 @@ export default function DonationDetailScreen() {
       .finally(stopLoading);
   }, [id, startLoading, stopLoading]);
 
-  const handleReivindicar = async () => {
+  const handleReivindicarPress = async () => {
     if (!user) {
       Alert.alert("Atenção", "Você precisa estar logado para reivindicar uma doação.");
       return;
     }
     if (!donation) return;
+
+    const jaAceitou = await AsyncStorage.getItem(DONATION_TERMS_KEY);
+    if (jaAceitou === "true") {
+      await executarReivindicacao();
+    } else {
+      setTermoAceito(false);
+      setTermoModalVisible(true);
+    }
+  };
+
+  const handleConfirmarTermo = async () => {
+    if (!termoAceito) {
+      Alert.alert("Atenção", "Você precisa aceitar os termos para continuar.");
+      return;
+    }
+    await AsyncStorage.setItem(DONATION_TERMS_KEY, "true");
+    setTermoModalVisible(false);
+    await executarReivindicacao();
+  };
+
+  const executarReivindicacao = async () => {
+    if (!user || !donation) return;
 
     setReivindicando(true);
     try {
@@ -127,7 +182,6 @@ export default function DonationDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#09090B]">
-      {/* Header */}
       <HStack className="flex-row items-center px-5 pt-2 pb-3">
         <TouchableOpacity onPress={() => router.back()} hitSlop={12} className="mr-3">
           <FontAwesome5 name="arrow-left" size={18} color="#A1A1AA" />
@@ -154,14 +208,12 @@ export default function DonationDetailScreen() {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
           >
-            {/* Foto */}
             <Image
               source={firstPhoto ? { uri: firstPhoto } : fallbackImage}
               style={{ width: "100%", height: 220, borderRadius: 20, marginBottom: 16 }}
               resizeMode="cover"
             />
 
-            {/* Badges */}
             <HStack className="flex-row flex-wrap mb-4" style={{ gap: 8 }}>
               <Box className="bg-[#1E3A0A] rounded-full px-3 py-1">
                 <Text className="text-[#84CC16] text-xs font-semibold">{donation.categoria}</Text>
@@ -180,7 +232,6 @@ export default function DonationDetailScreen() {
               </Box>
             </HStack>
 
-            {/* Quantidade | Validade */}
             <Box className="bg-[#141416] rounded-2xl p-4 mb-3">
               <HStack style={{ gap: 16 }}>
                 <InfoCell icon="weight" label="Quantidade" value={donation.quantidade} />
@@ -189,7 +240,6 @@ export default function DonationDetailScreen() {
               </HStack>
             </Box>
 
-            {/* Localização */}
             <Box className="bg-[#141416] rounded-2xl px-4 py-3 mb-3">
               <HStack className="flex-row items-center" style={{ gap: 10 }}>
                 <FontAwesome5 name="map-marker-alt" size={14} color="#65A30D" />
@@ -199,7 +249,6 @@ export default function DonationDetailScreen() {
               </HStack>
             </Box>
 
-            {/* Data + Horário */}
             <Box className="bg-[#141416] rounded-2xl px-4 py-3 mb-4">
               <HStack className="flex-row items-center" style={{ gap: 10 }}>
                 <FontAwesome5 name="calendar-check" size={14} color="#65A30D" />
@@ -212,7 +261,6 @@ export default function DonationDetailScreen() {
               </HStack>
             </Box>
 
-            {/* Descrição */}
             {!!donation.descricao && (
               <Box className="mb-4">
                 <Text className="text-[#71717A] text-xs mb-1.5 uppercase tracking-widest">Descrição</Text>
@@ -220,7 +268,6 @@ export default function DonationDetailScreen() {
               </Box>
             )}
 
-            {/* Observações */}
             {!!donation.observacoes && (
               <Box className="mb-4">
                 <Text className="text-[#71717A] text-xs mb-1.5 uppercase tracking-widest">Observações</Text>
@@ -228,7 +275,6 @@ export default function DonationDetailScreen() {
               </Box>
             )}
 
-            {/* Divider + Doador */}
             <Box className="h-px bg-[#27272A] my-4" />
 
             {loadingDonor ? (
@@ -255,7 +301,6 @@ export default function DonationDetailScreen() {
               </HStack>
             )}
 
-            {/* Agendamento */}
             {canClaim && (
               <>
                 <Box className="h-px bg-[#27272A] my-4" />
@@ -304,11 +349,10 @@ export default function DonationDetailScreen() {
             )}
           </ScrollView>
 
-          {/* Botão fixo na base */}
           <Box className="px-5 pt-3" style={{ paddingBottom: tabBarHeight + 12 }}>
             {canClaim ? (
               <TouchableOpacity
-                onPress={handleReivindicar}
+                onPress={handleReivindicarPress}
                 disabled={reivindicando || !isScheduleValid}
                 activeOpacity={isScheduleValid ? 0.8 : 1}
               >
@@ -342,6 +386,95 @@ export default function DonationDetailScreen() {
           </Box>
         </KeyboardAvoidingView>
       )}
+
+      <Modal
+        visible={termoModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setTermoModalVisible(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}
+          onPress={() => setTermoModalVisible(false)}
+        >
+          <Pressable
+            style={{
+              backgroundColor: "#111615",
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.08)",
+              padding: 24,
+              maxHeight: "85%",
+            }}
+            onPress={() => {}}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "600", marginBottom: 4 }}>
+              Termo de aceite para doações
+            </Text>
+            <Text style={{ color: "#A3A3A3", fontSize: 13, marginBottom: 16 }}>
+              Leia antes de solicitar uma doação. Este aceite é válido para todas as solicitações futuras.
+            </Text>
+
+            <ScrollView
+              style={{
+                backgroundColor: "#0D120F",
+                borderRadius: 16,
+                padding: 16,
+                maxHeight: 300,
+                marginBottom: 20,
+              }}
+              showsVerticalScrollIndicator
+            >
+              <Text style={{ color: "#E5E7EB", fontSize: 13, lineHeight: 22 }}>
+                {TERMO_DOACAO}
+              </Text>
+            </ScrollView>
+
+            <HStack className="flex-row items-center justify-between mb-5">
+              <VStack style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "500" }}>
+                  Li e concordo com os termos
+                </Text>
+                <Text style={{ color: "#A3A3A3", fontSize: 12, marginTop: 2 }}>
+                  Este aceite será salvo para solicitações futuras.
+                </Text>
+              </VStack>
+              <Switch
+                value={termoAceito}
+                onValueChange={setTermoAceito}
+                trackColor={{ false: "#1F2A18", true: "rgba(101,201,15,0.4)" }}
+                thumbColor={termoAceito ? "#65C90F" : "#A1A1AA"}
+                ios_backgroundColor="#1F2A18"
+              />
+            </HStack>
+
+            <Pressable
+              onPress={handleConfirmarTermo}
+              disabled={!termoAceito}
+              style={{
+                height: 52,
+                borderRadius: 16,
+                backgroundColor: termoAceito ? "#65C90F" : "#1F2A18",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: 12,
+              }}
+            >
+              <Text style={{ color: termoAceito ? "#081106" : "#A3A3A3", fontSize: 16, fontWeight: "600" }}>
+                Confirmar e solicitar
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setTermoModalVisible(false)}
+              style={{ height: 44, alignItems: "center", justifyContent: "center" }}
+            >
+              <Text style={{ color: "#A3A3A3", fontSize: 15 }}>Cancelar</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
