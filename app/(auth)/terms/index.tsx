@@ -16,31 +16,77 @@ const TERMS_ACCEPTED_KEY = "alimenta_plus_terms_accepted_v1";
 
 const MOCK_TERMS_MARKDOWN = `# Termos de Uso do Alimenta+
 
-Estes termos estao sendo exibidos em modo de demonstracao, sem integracao com Firebase no momento.
+**Última atualização: 30 de maio de 2026**
 
-## 1. Uso da plataforma
+## 1. Sobre a Plataforma
 
-Ao usar o aplicativo, voce concorda em fornecer informacoes corretas e em respeitar as regras de funcionamento da plataforma.
+O Alimenta+ é uma plataforma digital acadêmica, sem fins lucrativos, desenvolvida com o objetivo de conectar doadores de alimentos excedentes a pessoas e instituições que necessitam desses recursos. A plataforma atua exclusivamente como intermediadora, não produzindo, transportando, armazenando nem garantindo a qualidade sanitária dos alimentos disponibilizados.
 
-## 2. Cadastro e autenticacao
+## 2. Aceitação dos Termos
 
-O acesso pode exigir nome, e-mail, senha e outras informacoes basicas para criar conta, entrar e recuperar senha.
+Ao criar uma conta no Alimenta+, você declara que leu, compreendeu e concorda com estes Termos de Uso. Caso não concorde com qualquer disposição, não utilize a plataforma.
 
-## 3. Dados e localizacao
+## 3. Cadastro e Autenticidade
 
-A plataforma pode usar a localizacao do dispositivo para exibir conteudos proximos e melhorar a experiencia de uso.
+Para utilizar o Alimenta+, você deverá fornecer as seguintes informações: nome completo, CPF, endereço de e-mail e senha. Ao se cadastrar, você declara que:
 
-## 4. Seguranca
+- Tem capacidade legal para aceitar estes termos
+- As informações fornecidas são verdadeiras, completas e atualizadas
+- Não utilizará CPF de terceiros nem criará perfis falsos
+- É o único responsável pela segurança e sigilo de sua senha
 
-As informacoes cadastradas devem ser verdadeiras. O uso indevido pode bloquear o acesso ou limitar funcionalidades.
+A plataforma poderá suspender ou excluir contas que apresentem informações falsas ou que violem estes termos.
 
-## 5. Privacidade
+## 4. Dados Pessoais e Privacidade
 
-Os dados sao usados para operacao do app, autenticacao e historico de uso.
+Em conformidade com a Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018), o Alimenta+ coleta e utiliza os seguintes dados pessoais:
 
-## 6. Aceite
+- **Nome e CPF:** para identificação e autenticação do usuário
+- **E-mail:** para comunicação e recuperação de acesso
+- **Localização:** para exibição de doações próximas ao usuário, mediante consentimento
+- **Dados de doações e solicitações:** para operação da plataforma e histórico de atividades
+- **Registros de acesso:** para segurança e auditoria, conforme o Marco Civil da Internet (Lei nº 12.965/2014)
 
-Ao continuar, voce declara que leu e concorda com estes termos.
+Os dados coletados são utilizados exclusivamente para o funcionamento da plataforma e não são comercializados ou compartilhados com terceiros, salvo quando necessário para a operação do serviço. Você poderá solicitar a exclusão da sua conta e dos seus dados a qualquer momento pelo suporte da plataforma.
+
+## 5. Geolocalização
+
+A plataforma poderá solicitar acesso à localização do seu dispositivo para exibir doações disponíveis próximas a você. O uso da geolocalização é opcional e pode ser desativado nas configurações do dispositivo, podendo impactar algumas funcionalidades.
+
+## 6. Notificações
+
+O Alimenta+ poderá enviar notificações relacionadas às suas doações e solicitações, como confirmações de agendamento, atualizações de status e alertas relevantes. Você poderá gerenciar as preferências de notificação nas configurações do aplicativo.
+
+## 7. Condutas Proibidas
+
+É expressamente proibido ao usuário:
+
+- Fornecer informações falsas ou enganosas
+- Utilizar a plataforma para fins comerciais ou revenda de alimentos recebidos
+- Criar múltiplas contas para obter vantagem indevida
+- Praticar qualquer forma de fraude, golpe ou má-fé
+- Utilizar a identidade de terceiros
+- Tentar obter doações em excesso ou de forma desleal
+
+## 8. Responsabilidades
+
+O Alimenta+ atua apenas como intermediador digital entre doadores e receptores. A plataforma não se responsabiliza pela qualidade, origem, estado de conservação ou adequação sanitária dos alimentos disponibilizados, em conformidade com a Lei nº 14.016/2020. A responsabilidade pelas informações cadastradas e pelo cumprimento das interações é exclusivamente dos usuários envolvidos.
+
+## 9. Suspensão e Exclusão de Conta
+
+A plataforma poderá suspender ou excluir contas em casos de violação destes termos, uso fraudulento, má-fé comprovada ou inatividade prolongada. O usuário também poderá solicitar a exclusão voluntária de sua conta a qualquer momento.
+
+## 10. Alterações nos Termos
+
+Estes termos poderão ser atualizados periodicamente. Alterações relevantes serão comunicadas pelo aplicativo. O uso continuado da plataforma após as alterações implica aceitação dos novos termos.
+
+## 11. Legislação Aplicável
+
+Estes termos são regidos pela legislação brasileira, em especial pela LGPD (Lei nº 13.709/2018), pelo Marco Civil da Internet (Lei nº 12.965/2014), pela Lei nº 14.016/2020 e pela Lei nº 15.224/2025.
+
+## 12. Contato
+
+Por se tratar de um projeto acadêmico, dúvidas ou solicitações relacionadas ao uso da plataforma devem ser direcionadas à equipe de desenvolvimento responsável pelo projeto.
 `;
 
 type MarkdownBlock =
@@ -115,7 +161,7 @@ export default function TermsScreen() {
   const [loading, setLoading] = useState(true);
 
   const markdownText = MOCK_TERMS_MARKDOWN;
-  const sourceLabel = "Conteudo mockado";
+  const sourceLabel = "Versão 1.0 – 30 de maio de 2026";
 
   const contentBlocks = useMemo(() => parseMarkdown(markdownText), [markdownText]);
 
@@ -337,10 +383,6 @@ export default function TermsScreen() {
                   </View>
                 </Pressable>
               </View>
-
-              <Text className="text-[#71717A] text-[12px] text-center leading-5 mt-4 px-2">
-                Modo atual: termos mockados, sem consulta ao Firebase.
-              </Text>
             </View>
           </View>
         </ScrollView>
