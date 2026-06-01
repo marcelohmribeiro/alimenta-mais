@@ -1,10 +1,10 @@
-import { settings } from "@/settings";
 import {
   CloudinaryServiceError,
   deleteByToken,
   uploadImages,
 } from "@/services/_cloudinary";
 import { db } from "@/services/_firebase";
+import { settings } from "@/settings";
 import {
   CloudinaryImageUploadResult,
   DonationDocument,
@@ -20,6 +20,7 @@ import {
   getDocs,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
@@ -182,6 +183,40 @@ export const salvarDoacao = async ({
       "Não foi possível cadastrar a doação. Tente novamente."
     );
   }
+};
+
+export const reivindicarDoacao = async (
+  donationId: string,
+  userId: string
+): Promise<void> => {
+  if (!db) {
+    throw new FirestoreServiceError(
+      "Banco de dados não configurado. Verifique as variáveis de ambiente do Firebase."
+    );
+  }
+
+  const donationRef = doc(db, "donations", donationId);
+
+  await runTransaction(db, async (transaction) => {
+    const donationSnap = await transaction.get(donationRef);
+
+    if (!donationSnap.exists()) {
+      throw new FirestoreServiceError("Doação não encontrada.");
+    }
+
+    const data = donationSnap.data() as DonationDocument;
+
+    if (data.status !== "disponivel") {
+      throw new FirestoreServiceError(
+        "Esta doação já foi reivindicada por outro usuário."
+      );
+    }
+
+    transaction.update(donationRef, {
+      status: "em análise",
+      reivindicadoPor: userId,
+    });
+  });
 };
 
 export const listarDoacoes = async (): Promise<DonationDocumentWithId[]> => {

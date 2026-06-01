@@ -1,3 +1,6 @@
+import useAuth from "@/hooks/_useAuth";
+import { FirestoreServiceError, listarDoacoes, reivindicarDoacao } from "@/services";
+import { DonationDocumentWithId, DonationStatus } from "@/types";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import {
   Box,
@@ -12,6 +15,7 @@ import { DonationDocumentWithId } from "@/types";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   Pressable,
@@ -96,44 +100,87 @@ type DonationCardItem = {
   date: string;
   category: string;
   imageUri?: string | null;
+  status: DonationStatus;
 };
 
+<<<<<<< HEAD
 type DonationCardProps = Omit<DonationCardItem, "id" | "category" | "location" | "distanceMeters">;
+=======
+type DonationCardProps = Omit<DonationCardItem, "id" | "category"> & {
+  onReivindicar?: () => void;
+  reivindicando?: boolean;
+};
+>>>>>>> origin/main
 
-const DonationCard = ({ title, weight, distance, date, imageUri }: DonationCardProps) => (
-  <Box className="bg-[#141416] rounded-[24px] p-3 mb-3 flex-row items-center border border-[#1E1E21]">
-    <Image
-      source={imageUri ? { uri: imageUri } : fallbackImage}
-      className="w-[100px] h-[100px] rounded-[20px]"
-      resizeMode="cover"
-    />
+const DonationCard = ({
+  title,
+  weight,
+  distance,
+  date,
+  imageUri,
+  status,
+  onReivindicar,
+  reivindicando,
+}: DonationCardProps) => (
+  <Box className="bg-[#141416] rounded-[24px] p-3 mb-3 border border-[#1E1E21]">
+    <HStack className="flex-row items-center">
+      <Image
+        source={imageUri ? { uri: imageUri } : fallbackImage}
+        className="w-[100px] h-[100px] rounded-[20px]"
+        resizeMode="cover"
+      />
 
-    <VStack className="ml-4 flex-1 items-start">
-      <Text className="text-white font-semibold text-lg leading-tight mb-0.5">
-        {title}
-      </Text>
-
-      <Text className="text-[#A1A1AA] text-sm mb-2">{weight}</Text>
-
-      <HStack className="flex-row items-center mb-1">
-        <FontAwesome5 name="map-marker-alt" size={12} color="#65A30D" />
-
-        <Text className="text-[#A1A1AA] text-[13px] ml-2">{distance}</Text>
-      </HStack>
-
-      <HStack className="flex-row items-center">
-        <FontAwesome5 name="clock" size={12} color="#65A30D" />
-
-        <Text className="text-[#A1A1AA] text-[13px] ml-2">
-          Validade: {date}
+      <VStack className="ml-4 flex-1 items-start">
+        <Text className="text-white font-semibold text-lg leading-tight mb-0.5">
+          {title}
         </Text>
-      </HStack>
-    </VStack>
+
+        <Text className="text-[#A1A1AA] text-sm mb-2">{weight}</Text>
+
+        <HStack className="flex-row items-center mb-1">
+          <FontAwesome5 name="map-marker-alt" size={12} color="#65A30D" />
+
+          <Text className="text-[#A1A1AA] text-[13px] ml-2">{distance}</Text>
+        </HStack>
+
+        <HStack className="flex-row items-center">
+          <FontAwesome5 name="clock" size={12} color="#65A30D" />
+
+          <Text className="text-[#A1A1AA] text-[13px] ml-2">
+            Validade: {date}
+          </Text>
+        </HStack>
+      </VStack>
+    </HStack>
+
+    {status === "disponivel" ? (
+      <TouchableOpacity
+        onPress={onReivindicar}
+        disabled={reivindicando}
+        activeOpacity={0.8}
+        className="mt-3"
+      >
+        <Box className="bg-[#65A30D] rounded-2xl h-10 items-center justify-center">
+          {reivindicando ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text className="text-white font-semibold text-sm">
+              Reivindicar doação
+            </Text>
+          )}
+        </Box>
+      </TouchableOpacity>
+    ) : status === "em análise" ? (
+      <Box className="mt-3 bg-[#27272A] rounded-2xl h-10 items-center justify-center">
+        <Text className="text-[#71717A] text-sm">Já reivindicada</Text>
+      </Box>
+    ) : null}
   </Box>
 );
 
 export default function Home() {
   const { user } = useAuth();
+<<<<<<< HEAD
   const addressCoordsRef = useRef<Map<string, Coordinates | null>>(new Map());
   const lastGeocodedLocationRef = useRef<string | null>(null);
 
@@ -150,11 +197,16 @@ export default function Home() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
+=======
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  
+>>>>>>> origin/main
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todas");
   const [donations, setDonations] = useState<DonationDocumentWithId[]>([]);
   const [loadingDonations, setLoadingDonations] = useState(true);
   const [donationsError, setDonationsError] = useState<string | null>(null);
+  const [reivindicandoId, setReivindicandoId] = useState<string | null>(null);
 
   useEffect(() => {
     checkLocationPermission();
@@ -374,6 +426,7 @@ export default function Home() {
     }
   };
 
+<<<<<<< HEAD
   const handleOpenLocationModal = () => {
     setLocationError(null);
     setLocationInput(locationValue);
@@ -461,6 +514,38 @@ export default function Home() {
       active = false;
     };
   }, [donations, userCoords]);
+=======
+  const handleReivindicar = async (donationId: string) => {
+    if (!user) {
+      Alert.alert(
+        "Atenção",
+        "Você precisa estar logado para reivindicar uma doação."
+      );
+      return;
+    }
+
+    setReivindicandoId(donationId);
+    try {
+      await reivindicarDoacao(donationId, user.uid);
+      setDonations((prev) =>
+        prev.map((d) =>
+          d.id === donationId
+            ? { ...d, status: "em análise", reivindicadoPor: user.uid }
+            : d
+        )
+      );
+      Alert.alert("Sucesso!", "Doação reivindicada com sucesso.");
+    } catch (error) {
+      const message =
+        error instanceof FirestoreServiceError
+          ? error.message
+          : "Não foi possível reivindicar a doação. Tente novamente.";
+      Alert.alert("Erro", message);
+    } finally {
+      setReivindicandoId(null);
+    }
+  };
+>>>>>>> origin/main
 
   const categories = useMemo(() => {
     const fromData = donations
@@ -488,6 +573,7 @@ export default function Home() {
         date: donation.validade,
         category: donation.categoria,
         imageUri: donation.fotos?.[0]?.secureUrl ?? null,
+        status: donation.status,
       })),
     [donations, distanceByDonationId]
   );
@@ -527,15 +613,13 @@ export default function Home() {
       <Box className="flex-1 bg-[#09090B] pt-12 px-4">
         {/* Header */}
         <HStack className="flex-row items-center justify-between mb-6">
-          <TouchableOpacity>
-            <FontAwesome5 name="arrow-left" size={20} color="white" />
-          </TouchableOpacity>
-
-          <Text className="text-white text-xl font-semibold">
-            Buscar doações
+          <Text className="text-white text-2xl font-bold">
+            Doações
           </Text>
 
-          <Box className="w-6" />
+          <Box className="bg-[#1E3A0A] w-10 h-10 rounded-full items-center justify-center">
+            <FontAwesome5 name="seedling" size={16} color="#84CC16" />
+          </Box>
         </HStack>
 
         {/* Search */}
@@ -582,8 +666,6 @@ export default function Home() {
             </Button>
 
             {categories.map((cat) => {
-              const isSelected = selectedCategory === cat;
-
               return (
                 <Button
                   key={cat}
@@ -652,6 +734,9 @@ export default function Home() {
                 distance={item.distance}
                 date={item.date}
                 imageUri={item.imageUri}
+                status={item.status}
+                onReivindicar={() => handleReivindicar(item.id)}
+                reivindicando={reivindicandoId === item.id}
               />
             ))
           ) : (
