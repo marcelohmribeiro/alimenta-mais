@@ -1,14 +1,14 @@
 import { db } from "@/services/_firebase";
 import { MotivoRecusa, SolicitacaoComId } from "@/types";
 import {
-    collection,
-    doc,
-    getDocs,
-    query,
-    runTransaction,
-    serverTimestamp,
-    updateDoc,
-    where,
+  collection,
+  doc,
+  getDocs,
+  query,
+  runTransaction,
+  serverTimestamp,
+  updateDoc,
+  where,
 } from "firebase/firestore";
 import { FirestoreServiceError } from "./_firestore";
 
@@ -60,23 +60,23 @@ export const aceitarSolicitacao = async (
       query(
         collection(db!, "solicitacoes"),
         where("doacaoId", "==", doacaoId),
-        where("status", "==", "pendente")
+        where("status", "==", "em_analise")
       )
     );
 
     transaction.update(solicitacaoRef, {
-      status: "aceita",
+      status: "aprovada",
       atualizadoEm: serverTimestamp(),
     });
 
     transaction.update(doacaoRef, {
-      status: "aprovado",
+      status: "rejeitada",
     });
 
     solicitacoesSnapshot.docs.forEach((d) => {
       if (d.id !== solicitacaoId) {
         transaction.update(d.ref, {
-          status: "recusada",
+          status: "rejeitada",
           motivoRecusa: "Doação já realizada",
           atualizadoEm: serverTimestamp(),
         });
@@ -98,7 +98,7 @@ export const recusarSolicitacao = async (
   const doacaoRef = doc(db, "donations", doacaoId);
 
   await updateDoc(solicitacaoRef, {
-    status: "recusada",
+    status: "rejeitada",
     motivoRecusa: motivo,
     atualizadoEm: serverTimestamp(),
   });

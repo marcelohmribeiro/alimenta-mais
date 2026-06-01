@@ -1,3 +1,5 @@
+export * from "./termos";
+
 export const impactMetrics = [
   { icon: "gift-outline", value: "28", label: "doações feitas" },
   { icon: "leaf", value: "126 kg", label: "alimentos doados" },

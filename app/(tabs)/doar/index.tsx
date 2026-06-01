@@ -1,16 +1,15 @@
 import useAuth from "@/hooks/_useAuth";
-import { useLoading } from "@/store";
 import {
   CloudinaryServiceError,
   FirestoreServiceError,
   salvarDoacao,
   verificarSeUsuarioEhDoador,
 } from "@/services";
+import { useLoading } from "@/store";
 import { DonationPhotoInput } from "@/types";
 import { dataValida, formatarData, formatarHorario } from "@/utils";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {

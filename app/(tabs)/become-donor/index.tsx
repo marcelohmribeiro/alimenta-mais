@@ -1,3 +1,5 @@
+import { AceiteTermo } from "@/components";
+import { TERMO_DOADOR } from "@/constants";
 import useAuth from "@/hooks/_useAuth";
 import { FirestoreServiceError, salvarDoador } from "@/services";
 import { useLoading } from "@/store";
@@ -32,6 +34,7 @@ export default function BecomeDonor() {
 
   const [documento, setDocumento] = useState("");
   const [endereco, setEndereco] = useState("");
+  const [consentido, setConsentido] = useState(false);
 
   const isLoading = loading > 0;
 
@@ -54,6 +57,14 @@ export default function BecomeDonor() {
 
     if (!endereco.trim()) {
       Alert.alert("Endereço obrigatório", "Informe o endereço ou ponto de retirada.");
+      return;
+    }
+
+    if (!consentido) {
+      Alert.alert(
+        "Termo obrigatório",
+        "É necessário concordar com o Termo de Consentimento para continuar."
+      );
       return;
     }
 
@@ -179,14 +190,22 @@ export default function BecomeDonor() {
               Informe onde os receptores poderão retirar as doações.
             </Text>
 
+            <AceiteTermo
+              termo={TERMO_DOADOR}
+              value={consentido}
+              onValueChange={setConsentido}
+              disabled={isLoading}
+            />
+
             <TouchableOpacity
               activeOpacity={0.85}
-              disabled={isLoading}
+              disabled={isLoading || !consentido}
               onPress={handleSubmit}
               className="overflow-hidden rounded-[22px]"
+              style={{ opacity: consentido ? 1 : 0.5 }}
             >
               <LinearGradient
-                colors={["#7DE11B", "#58B50B"]}
+                colors={consentido ? ["#7DE11B", "#58B50B"] : ["#2B3A24", "#1F2A18"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{
@@ -201,7 +220,7 @@ export default function BecomeDonor() {
                 ) : (
                   <Text
                     style={{
-                      color: "#081106",
+                      color: consentido ? "#081106" : "#7C8A6E",
                       fontSize: 16,
                       fontWeight: "600",
                       letterSpacing: 0.2,
