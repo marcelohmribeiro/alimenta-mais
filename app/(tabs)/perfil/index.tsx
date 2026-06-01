@@ -1,6 +1,7 @@
 import { absoluteFill, impactMetrics, menuItems } from "@/constants";
 import useAuth from "@/hooks/_useAuth";
 import { auth, db, storage } from "@/services";
+import { useLoading } from "@/store";
 import { UserProfile } from "@/types";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -74,7 +75,7 @@ const getFirebaseErrorCode = (error: unknown) => {
 const ProfileScreen = () => {
   const { user, initializing } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { startLoading, stopLoading } = useLoading();
   const [error, setError] = useState<string | null>(null);
   const [syncWarning, setSyncWarning] = useState<string | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
@@ -116,18 +117,16 @@ const ProfileScreen = () => {
 
       if (!user) {
         setProfile(null);
-        setLoading(false);
         router.replace("/(auth)/login");
         return;
       }
 
       if (!db) {
         setError("Firebase não está configurado para carregar o perfil.");
-        setLoading(false);
         return;
       }
 
-      setLoading(true);
+      startLoading();
       setError(null);
       setSyncWarning(null);
 
@@ -160,7 +159,7 @@ const ProfileScreen = () => {
             : "Alguns dados do perfil não puderam ser sincronizados agora."
         );
       } finally {
-        setLoading(false);
+        stopLoading();
       }
     };
 
@@ -361,18 +360,6 @@ const ProfileScreen = () => {
     router.push(route);
   };
 
-  if (initializing || loading) {
-    return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#050807]">
-        <StatusBar style="light" />
-        <LinearGradient
-          colors={["rgba(101,201,15,0.12)", "rgba(5,8,7,0)"]}
-          style={absoluteFill}
-        />
-        <ActivityIndicator size="large" color="#65C90F" />
-      </SafeAreaView>
-    );
-  }
 
   if (error && !displayProfile) {
     return (

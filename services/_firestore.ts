@@ -11,6 +11,7 @@ import {
   DonationDocumentWithId,
   DonorData,
   SalvarDoacaoParams,
+  UserProfile,
 } from "@/types";
 import {
   addDoc,
@@ -185,9 +186,20 @@ export const salvarDoacao = async ({
   }
 };
 
-export const reivindicarDoacao = async (
+export const solicitarDoacao = async (
   donationId: string,
-  userId: string
+  userId: string,
+  dadosDoacao: {
+    titulo: string;
+    quantidade: string;
+    validade: string;
+    categoria: string;
+    doadorId: string;
+    solicitanteNome: string;
+    solicitanteAvatar: string | null;
+  },
+  dataAgendada: string,
+  horarioAgendado: string,
 ): Promise<void> => {
   if (!db) {
     throw new FirestoreServiceError(
@@ -213,10 +225,37 @@ export const reivindicarDoacao = async (
     }
 
     transaction.update(donationRef, {
-      status: "em análise",
-      reivindicadoPor: userId,
+      status: "indisponivel"
+    });
+
+    const solicitacaoRef = doc(collection(db!, "solicitacoes"));
+    transaction.set(solicitacaoRef, {
+      doacaoId: donationId,
+      doadorId: dadosDoacao.doadorId,
+      solicitanteId: userId,
+      solicitanteNome: dadosDoacao.solicitanteNome,
+      solicitanteAvatar: dadosDoacao.solicitanteAvatar,
+      dataAgendada,
+      horarioAgendado,
+      status: "pendente",
+      motivoRecusa: null,
+      criadoEm: serverTimestamp(),
+      atualizadoEm: serverTimestamp(),
     });
   });
+};
+
+export const buscarDoacao = async (
+  id: string
+): Promise<DonationDocumentWithId | null> => {
+  if (!db) return null;
+  try {
+    const snap = await getDoc(doc(db, "donations", id));
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...(snap.data() as DonationDocument) };
+  } catch {
+    return null;
+  }
 };
 
 export const listarDoacoes = async (): Promise<DonationDocumentWithId[]> => {
@@ -242,5 +281,25 @@ export const listarDoacoes = async (): Promise<DonationDocumentWithId[]> => {
     throw new FirestoreServiceError(
       "Não foi possível carregar as doações. Tente novamente."
     );
+  }
+};
+
+export const buscarPerfilUsuario = async (
+  uid: string
+): Promise<UserProfile | null> => {
+  if (!db) return null;
+  try {
+    const snap = await getDoc(doc(db, "users", uid));
+    if (!snap.exists()) return null;
+    const data = snap.data() as Partial<UserProfile>;
+    return {
+      nome: data.nome?.trim() ?? "",
+      email: data.email?.trim() ?? "",
+      telefone: data.telefone?.trim() ?? "",
+      fotoPerfil: data.fotoPerfil?.trim() ?? "",
+      tipoUsuario: data.tipoUsuario?.trim() ?? "",
+    };
+  } catch {
+    return null;
   }
 };

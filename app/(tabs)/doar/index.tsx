@@ -5,11 +5,11 @@ import {
   salvarDoacao,
   verificarSeUsuarioEhDoador,
 } from "@/services";
+import { useLoading } from "@/store";
 import { DonationPhotoInput } from "@/types";
 import { dataValida, formatarData, formatarHorario } from "@/utils";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -30,7 +30,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const GREEN = "#65C90F";
 
 export default function DoarScreen() {
-  const { user, initializing } = useAuth();
+  const { user } = useAuth();
   const [fotos, setFotos] = useState<DonationPhotoInput[]>([]);
   const [nomeAlimento, setNomeAlimento] = useState("");
   const [categoria, setCategoria] = useState("Prontos");
@@ -45,18 +45,19 @@ export default function DoarScreen() {
   const [endereco, setEndereco] = useState("");
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [validandoDoador, setValidandoDoador] = useState(true);
+  const { startLoading, stopLoading } = useLoading();
   const [ehDoador, setEhDoador] = useState(false);
 
   useEffect(() => {
     const verificarDoador = async () => {
+      startLoading();
       try {
         setEhDoador(await verificarSeUsuarioEhDoador(user?.uid));
       } catch (error) {
         console.log("ERRO AO VALIDAR DOADOR:", error);
         setEhDoador(false);
       } finally {
-        setValidandoDoador(false);
+        stopLoading();
       }
     };
 
@@ -131,6 +132,8 @@ export default function DoarScreen() {
 
     try {
       setLoading(true);
+      console.log("USUARIO:", user);
+      console.log("INICIANDO SALVAMENTO");
 
       await salvarDoacao({
         userId: user?.uid ?? null,
@@ -147,7 +150,7 @@ export default function DoarScreen() {
         horarioFim,
         endereco,
       });
-
+      console.log("SALVOU COM SUCESSO");
       limparFormulario();
 
       Alert.alert("Sucesso", "Doação cadastrada com sucesso!");
@@ -166,13 +169,6 @@ export default function DoarScreen() {
     }
   };
 
-  if (initializing || validandoDoador) {
-    return (
-      <SafeAreaView className="flex-1 bg-[#0B0F0C] items-center justify-center">
-        <ActivityIndicator color="#65C90F" size="large" />
-      </SafeAreaView>
-    );
-  }
 
   if (!ehDoador) {
     return (
@@ -421,37 +417,34 @@ export default function DoarScreen() {
             </Section>
 
             <Pressable
-              disabled={loading}
-              onPress={handleSalvarDoacao}
-              className="mt-2"
-            >
-              <LinearGradient
-                colors={loading ? ["#3F7F2C", "#2B641F"] : ["#65C90F", "#4CAF0D"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  height: 62,
-                  borderRadius: 20,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <View className="flex-row items-center">
-                    <MaterialCommunityIcons
-                      name="gift-outline"
-                      size={25}
-                      color="#FFFFFF"
-                    />
-                    <Text className="text-white text-[20px] font-bold ml-3">
-                      Cadastrar doação
-                    </Text>
-                  </View>
-                )}
-              </LinearGradient>
-            </Pressable>
+  disabled={loading}
+  onPress={() => {
+    console.log("CLICOU NO BOTÃO");
+    handleSalvarDoacao();
+  }}
+  style={{
+    marginTop: 8,
+    height: 62,
+    borderRadius: 20,
+    backgroundColor: "#65C90F",
+    alignItems: "center",
+    justifyContent: "center",
+  }}
+>
+  {loading ? (
+    <ActivityIndicator color="#FFFFFF" />
+  ) : (
+    <Text
+      style={{
+        color: "#081106",
+        fontSize: 20,
+        fontWeight: "bold",
+      }}
+    >
+      Cadastrar doação
+    </Text>
+  )}
+</Pressable>
 
             <View className="flex-row justify-center items-center mt-4">
               <MaterialCommunityIcons name="lock-outline" size={16} color={GREEN} />

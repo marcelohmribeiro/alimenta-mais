@@ -1,3 +1,5 @@
+export * from "./termos";
+
 export const impactMetrics = [
   { icon: "gift-outline", value: "28", label: "doações feitas" },
   { icon: "leaf", value: "126 kg", label: "alimentos doados" },
@@ -5,54 +7,6 @@ export const impactMetrics = [
 ] as const;
 
 export const menuItems = [
-  {
-    icon: "gift-outline",
-    title: "Minhas doações",
-    subtitle: "Histórico de alimentos doados",
-    route: undefined,
-  },
-  {
-    icon: "archive-outline",
-    title: "Minhas solicitações",
-    subtitle: "Acompanhe suas solicitações",
-    route: undefined,
-  },
-  {
-    icon: "inbox-arrow-down-outline",
-    title: "Solicitações recebidas",
-    subtitle: "Gerencie pedidos das suas doações",
-    route: "/(tabs)/solicitacoes-recebidas",
-  },
-  {
-    icon: "map-marker-outline",
-    title: "Endereços salvos",
-    subtitle: "Gerencie seus endereços",
-    route: undefined,
-  },
-  {
-    icon: "heart-outline",
-    title: "Favoritos",
-    subtitle: "Alimentos e doadores favoritados",
-    route: undefined,
-  },
-  {
-    icon: "star-outline",
-    title: "Avaliações",
-    subtitle: "Avalie doações e doadores",
-    route: undefined,
-  },
-  {
-    icon: "help-circle-outline",
-    title: "Central de ajuda",
-    subtitle: "Dúvidas frequentes e suporte",
-    route: undefined,
-  },
-  {
-    icon: "information-outline",
-    title: "Sobre o Alimenta+",
-    subtitle: "Saiba mais sobre o app",
-    route: undefined,
-  },
   {
     icon: "shield-check-outline",
     title: "Termos de uso e privacidade",

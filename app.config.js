@@ -1,20 +1,23 @@
-const appJson = require('./app.json');
-
 module.exports = ({ config }) => {
-  const baseConfig = appJson.expo ?? config;
-  const isEasBuild = process.env.EAS_BUILD === 'true' || Boolean(process.env.EAS_BUILD_PROFILE);
-  const { updates: baseUpdates, runtimeVersion, ...restConfig } = baseConfig;
-
-  const updates = isEasBuild
-    ? baseUpdates
-    : (() => {
-        const { url, ...restUpdates } = baseUpdates ?? {};
-        return { ...restUpdates, enabled: false };
-      })();
-
+  const { runtimeVersion, ...rest } = config;
   return {
-    ...restConfig,
-    ...(isEasBuild ? { runtimeVersion } : {}),
-    ...(updates ? { updates } : {}),
+    ...rest,
+    updates: {
+      ...config.updates,
+      url: "https://u.expo.dev/301ef7fb-d473-401e-909b-012454d38ee2",
+      enabled: true,
+    },
+    android: {
+      ...config.android,
+      runtimeVersion: {
+        policy: "appVersion",
+      },
+    },
+    ios: {
+      ...config.ios,
+      runtimeVersion: {
+        policy: "appVersion",
+      },
+    },
   };
 };

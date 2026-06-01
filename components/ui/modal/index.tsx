@@ -115,6 +115,7 @@ const Modal = React.forwardRef<React.ComponentRef<typeof UIModal>, IModalProps>(
     <UIModal
       ref={ref}
       {...props}
+      pointerEvents="box-none"
       className={modalStyle({ size, class: className })}
       context={{ size }}
     />
@@ -165,7 +166,7 @@ const ModalContent = React.forwardRef<
       ref={ref}
       initial={{
         opacity: 0,
-        scale: 0.9,
+        scale: 0.95,
       }}
       animate={{
         opacity: 1,
@@ -173,15 +174,11 @@ const ModalContent = React.forwardRef<
       }}
       exit={{
         opacity: 0,
+        scale: 0.95,
       }}
       transition={{
-        type: 'spring',
-        damping: 18,
-        stiffness: 250,
-        opacity: {
-          type: 'timing',
-          duration: 250,
-        },
+        type: 'timing',
+        duration: 220,
       }}
       {...props}
       className={modalContentStyle({

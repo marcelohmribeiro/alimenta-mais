@@ -1,40 +1,25 @@
-import useAuth from "@/hooks/_useAuth";
-import { FirestoreServiceError, listarDoacoes, reivindicarDoacao } from "@/services";
+import { DonationCard } from "@/components";
+import { Box, Button, ButtonText, HStack, Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader, Text } from "@/components/ui";
+import { listarDoacoes } from "@/services";
+import { useLoading } from "@/store";
 import { DonationDocumentWithId, DonationStatus } from "@/types";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
-import {
-  Box,
-  Button,
-  ButtonText,
-  HStack,
-  Text,
-  VStack,
-} from "@gluestack-ui/themed";
-import { listarDoacoes } from "@/services";
-import { DonationDocumentWithId } from "@/types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
+import { router } from "expo-router";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/services/_firebase";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Pressable,
   ScrollView,
   TextInput,
   TouchableOpacity,
-  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Location from "expo-location";
-import { doc, getDoc } from "firebase/firestore";
-import useAuth from "@/hooks/_useAuth";
-import { db } from "@/services";
-
 const LOCATION_PERMISSION_KEY = "@location_permission_granted";
 
-const fallbackImage = require("@/assets/images/pao.jpg");
 const baseCategories = ["Todas", "Prontos", "Frutas", "Verduras", "Pães"];
 
 type Coordinates = {
@@ -103,84 +88,9 @@ type DonationCardItem = {
   status: DonationStatus;
 };
 
-<<<<<<< HEAD
-type DonationCardProps = Omit<DonationCardItem, "id" | "category" | "location" | "distanceMeters">;
-=======
-type DonationCardProps = Omit<DonationCardItem, "id" | "category"> & {
-  onReivindicar?: () => void;
-  reivindicando?: boolean;
-};
->>>>>>> origin/main
-
-const DonationCard = ({
-  title,
-  weight,
-  distance,
-  date,
-  imageUri,
-  status,
-  onReivindicar,
-  reivindicando,
-}: DonationCardProps) => (
-  <Box className="bg-[#141416] rounded-[24px] p-3 mb-3 border border-[#1E1E21]">
-    <HStack className="flex-row items-center">
-      <Image
-        source={imageUri ? { uri: imageUri } : fallbackImage}
-        className="w-[100px] h-[100px] rounded-[20px]"
-        resizeMode="cover"
-      />
-
-      <VStack className="ml-4 flex-1 items-start">
-        <Text className="text-white font-semibold text-lg leading-tight mb-0.5">
-          {title}
-        </Text>
-
-        <Text className="text-[#A1A1AA] text-sm mb-2">{weight}</Text>
-
-        <HStack className="flex-row items-center mb-1">
-          <FontAwesome5 name="map-marker-alt" size={12} color="#65A30D" />
-
-          <Text className="text-[#A1A1AA] text-[13px] ml-2">{distance}</Text>
-        </HStack>
-
-        <HStack className="flex-row items-center">
-          <FontAwesome5 name="clock" size={12} color="#65A30D" />
-
-          <Text className="text-[#A1A1AA] text-[13px] ml-2">
-            Validade: {date}
-          </Text>
-        </HStack>
-      </VStack>
-    </HStack>
-
-    {status === "disponivel" ? (
-      <TouchableOpacity
-        onPress={onReivindicar}
-        disabled={reivindicando}
-        activeOpacity={0.8}
-        className="mt-3"
-      >
-        <Box className="bg-[#65A30D] rounded-2xl h-10 items-center justify-center">
-          {reivindicando ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <Text className="text-white font-semibold text-sm">
-              Reivindicar doação
-            </Text>
-          )}
-        </Box>
-      </TouchableOpacity>
-    ) : status === "em análise" ? (
-      <Box className="mt-3 bg-[#27272A] rounded-2xl h-10 items-center justify-center">
-        <Text className="text-[#71717A] text-sm">Já reivindicada</Text>
-      </Box>
-    ) : null}
-  </Box>
-);
-
 export default function Home() {
-  const { user } = useAuth();
-<<<<<<< HEAD
+  const { startLoading, stopLoading } = useLoading();
+  
   const addressCoordsRef = useRef<Map<string, Coordinates | null>>(new Map());
   const lastGeocodedLocationRef = useRef<string | null>(null);
 
@@ -197,16 +107,10 @@ export default function Home() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
-=======
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  
->>>>>>> origin/main
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todas");
   const [donations, setDonations] = useState<DonationDocumentWithId[]>([]);
-  const [loadingDonations, setLoadingDonations] = useState(true);
   const [donationsError, setDonationsError] = useState<string | null>(null);
-  const [reivindicandoId, setReivindicandoId] = useState<string | null>(null);
 
   useEffect(() => {
     checkLocationPermission();
@@ -214,13 +118,13 @@ export default function Home() {
 
   useEffect(() => {
     const loadSavedAddresses = async () => {
-      if (!user || !db) {
+      if (!db) {
         setSavedAddresses([]);
         return;
       }
 
       try {
-        const userRef = doc(db, "users", user.uid);
+        const userRef = doc(db, "users", "current");
         const snapshot = await getDoc(userRef);
 
         if (!snapshot.exists()) {
@@ -245,7 +149,7 @@ export default function Home() {
     };
 
     void loadSavedAddresses();
-  }, [user?.uid]);
+  }, []);
 
   useEffect(() => {
     const trimmedLocation = locationValue.trim();
@@ -307,14 +211,11 @@ export default function Home() {
     let active = true;
 
     const loadDonations = async () => {
+      startLoading();
       try {
-        setLoadingDonations(true);
         setDonationsError(null);
         const data = await listarDoacoes();
-
-        if (active) {
-          setDonations(data);
-        }
+        if (active) setDonations(data);
       } catch (error) {
         console.error("Erro ao carregar doações:", error);
         if (active) {
@@ -322,17 +223,12 @@ export default function Home() {
           setDonations([]);
         }
       } finally {
-        if (active) {
-          setLoadingDonations(false);
-        }
+        if (active) stopLoading();
       }
     };
 
     loadDonations();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
   const loadGpsLocation = async (requestPermission: boolean) => {
@@ -382,29 +278,16 @@ export default function Home() {
 
   const checkLocationPermission = async () => {
     try {
-      const alreadyAccepted = await AsyncStorage.getItem(
-        LOCATION_PERMISSION_KEY,
-      );
-
+      const alreadyAccepted = await AsyncStorage.getItem(LOCATION_PERMISSION_KEY);
       const { status } = await Location.getForegroundPermissionsAsync();
-
+      
       if (alreadyAccepted === "true" || status === "granted") {
-        setLocationModalMode((current) =>
-          current === "selection" ? current : null,
-        );
+        setLocationModalMode(null);
         await loadGpsLocation(false);
         return;
       }
-
-      await loadGpsLocation(true);
-
-      const { status: updatedStatus } =
-        await Location.getForegroundPermissionsAsync();
-
-      setLocationModalMode((current) => {
-        if (current === "selection") return current;
-        return updatedStatus === "granted" ? null : "permission";
-      });
+      
+      setLocationModalMode("permission");
     } catch (error) {
       console.log("Erro ao verificar localização:", error);
     }
@@ -413,20 +296,16 @@ export default function Home() {
   const handleEnableLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-
       if (status === "granted") {
         await AsyncStorage.setItem(LOCATION_PERMISSION_KEY, "true");
         setLocationModalMode(null);
         await loadGpsLocation(false);
-        return;
       }
-      setLocationModalMode("permission");
     } catch (error) {
       console.log("Erro ao solicitar localização:", error);
     }
   };
 
-<<<<<<< HEAD
   const handleOpenLocationModal = () => {
     setLocationError(null);
     setLocationInput(locationValue);
@@ -514,45 +393,10 @@ export default function Home() {
       active = false;
     };
   }, [donations, userCoords]);
-=======
-  const handleReivindicar = async (donationId: string) => {
-    if (!user) {
-      Alert.alert(
-        "Atenção",
-        "Você precisa estar logado para reivindicar uma doação."
-      );
-      return;
-    }
-
-    setReivindicandoId(donationId);
-    try {
-      await reivindicarDoacao(donationId, user.uid);
-      setDonations((prev) =>
-        prev.map((d) =>
-          d.id === donationId
-            ? { ...d, status: "em análise", reivindicadoPor: user.uid }
-            : d
-        )
-      );
-      Alert.alert("Sucesso!", "Doação reivindicada com sucesso.");
-    } catch (error) {
-      const message =
-        error instanceof FirestoreServiceError
-          ? error.message
-          : "Não foi possível reivindicar a doação. Tente novamente.";
-      Alert.alert("Erro", message);
-    } finally {
-      setReivindicandoId(null);
-    }
-  };
->>>>>>> origin/main
 
   const categories = useMemo(() => {
-    const fromData = donations
-      .map((donation) => donation.categoria)
-      .filter(Boolean);
-    const unique = Array.from(new Set([...baseCategories, ...fromData]));
-    return unique;
+    const fromData = donations.map((d) => d.categoria).filter(Boolean);
+    return Array.from(new Set([...baseCategories, ...fromData]));
   }, [donations]);
 
   const donationCards = useMemo<DonationCardItem[]>(
@@ -613,10 +457,7 @@ export default function Home() {
       <Box className="flex-1 bg-[#09090B] pt-12 px-4">
         {/* Header */}
         <HStack className="flex-row items-center justify-between mb-6">
-          <Text className="text-white text-2xl font-bold">
-            Doações
-          </Text>
-
+          <Text className="text-white text-2xl font-bold">Doações</Text>
           <Box className="bg-[#1E3A0A] w-10 h-10 rounded-full items-center justify-center">
             <FontAwesome5 name="seedling" size={16} color="#84CC16" />
           </Box>
@@ -626,7 +467,6 @@ export default function Home() {
         <HStack className="flex-row items-center mb-6">
           <Box className="flex-1 flex-row items-center bg-black/30 rounded-2xl px-4 h-12 border border-[#27272A]">
             <FontAwesome5 name="search" size={16} color="#A1A1AA" />
-
             <TextInput
               value={search}
               onChangeText={setSearch}
@@ -639,8 +479,6 @@ export default function Home() {
               style={{ fontFamily: "System" }}
             />
           </Box>
-
-          {/* Botão limpar filtro */}
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch("")}>
               <Box className="ml-3 bg-[#1C1C1E] rounded-2xl w-12 h-12 items-center justify-center">
@@ -650,40 +488,36 @@ export default function Home() {
           )}
         </HStack>
 
-        {/* Categories + localização */}
+        {/* Categories */}
         <Box className="h-12 mb-4">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ alignItems: "center" }}
-          >
-            <Button
-              onPress={handleOpenLocationModal}
-              className="bg-[#1E3A0A] mr-2 px-4 rounded-xl h-10 border-0 items-center justify-center"
-            >
-              <FontAwesome5 name="location-arrow" size={16} color="#84CC16" />
-            </Button>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <TouchableOpacity onPress={handleOpenLocationModal} activeOpacity={0.8}>
+              <Button className="bg-[#1E3A0A] mr-2 px-4 rounded-xl h-10 border-0 items-center justify-center">
+                <FontAwesome5 name="location-arrow" size={16} color="#84CC16" />
+              </Button>
+            </TouchableOpacity>
 
-            {categories.map((cat) => {
-              return (
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                onPress={() => setSelectedCategory(cat)}
+                activeOpacity={0.8}
+              >
                 <Button
-                  key={cat}
-                  onPress={() => setSelectedCategory(cat)}
                   className={`${
-                    isSelected ? "bg-[#1E3A0A]" : "bg-[#27272A]"
+                    selectedCategory === cat ? "bg-[#1E3A0A]" : "bg-[#27272A]"
                   } mr-2 px-6 rounded-xl h-10 border-0 items-center justify-center`}
                 >
                   <ButtonText
                     className={`${
-                      isSelected ? "text-[#84CC16] font-bold" : "text-gray-300"
+                      selectedCategory === cat ? "text-[#84CC16] font-bold" : "text-gray-300"
                     } text-center text-sm`}
                   >
                     {cat}
                   </ButtonText>
                 </Button>
-              );
-            })}
+              </TouchableOpacity>
+            ))}
           </ScrollView>
         </Box>
 
@@ -693,10 +527,7 @@ export default function Home() {
           className="flex-row items-center mb-3"
         >
           <FontAwesome5 name="map-marker-alt" size={12} color="#65A30D" />
-          <Text
-            className="text-[#A1A1AA] text-[13px] ml-2 flex-1"
-            numberOfLines={1}
-          >
+          <Text className="text-[#A1A1AA] text-[13px] ml-2 flex-1" numberOfLines={1}>
             {locationValue.trim()
               ? locationValue.trim()
               : userCoords
@@ -711,21 +542,13 @@ export default function Home() {
           {filteredDonations.length} doação(ões) encontrada(s)
         </Text>
 
-        {/* Donation List */}
+        {/* Lista */}
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: 100,
-          }}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 100 }}
         >
-          {loadingDonations ? (
-            <Box className="items-center justify-center mt-20">
-              <ActivityIndicator color="#65A30D" size="large" />
-              <Text className="text-[#A1A1AA] text-center mt-4">
-                Carregando doações...
-              </Text>
-            </Box>
-          ) : filteredDonations.length > 0 ? (
+          {filteredDonations.length > 0 ? (
             filteredDonations.map((item) => (
               <DonationCard
                 key={item.id}
@@ -735,8 +558,7 @@ export default function Home() {
                 date={item.date}
                 imageUri={item.imageUri}
                 status={item.status}
-                onReivindicar={() => handleReivindicar(item.id)}
-                reivindicando={reivindicandoId === item.id}
+                onPress={() => router.push(`/(tabs)/home/${item.id}` as any)}
               />
             ))
           ) : (
@@ -744,11 +566,9 @@ export default function Home() {
               <Box className="bg-[#18181B] w-20 h-20 rounded-full items-center justify-center mb-4">
                 <FontAwesome5 name="search" size={28} color="#71717A" />
               </Box>
-
               <Text className="text-white text-lg font-semibold mb-2">
                 {donationsError ?? "Nenhuma doação encontrada"}
               </Text>
-
               <Text className="text-[#71717A] text-center px-8">
                 {donationsError
                   ? "Tente novamente mais tarde."
@@ -759,144 +579,122 @@ export default function Home() {
         </ScrollView>
       </Box>
 
-      {/* Modal localização */}
-      <Modal
-        visible={locationModalMode !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setLocationModalMode(null)}
-      >
-        <View className="flex-1 justify-center bg-black/60 px-6">
-          <Pressable className="absolute inset-0" onPress={() => setLocationModalMode(null)} />
+      {/* Modal de localização */}
+      <Modal isOpen={locationModalMode !== null}>
+        <ModalBackdrop onPress={() => setLocationModalMode(null)} />
+        <ModalContent className="bg-[#18181B] border border-[#27272A] rounded-[28px] mx-6">
+          <ModalHeader className="items-center pt-6">
+            <Box className="bg-[#1E3A0A] w-16 h-16 rounded-full items-center justify-center mb-4">
+              <FontAwesome5
+                name={locationModalMode === "permission" ? "map-marker-alt" : "location-arrow"}
+                size={24}
+                color="#84CC16"
+              />
+            </Box>
+          </ModalHeader>
+          <ModalBody className="pb-2">
+            {locationModalMode === "permission" ? (
+              <>
+                <Text className="text-white text-xl font-bold text-center mb-3">
+                  Habilitar localização
+                </Text>
+                <Text className="text-[#A1A1AA] text-center leading-6">
+                  Precisamos da sua localização para mostrar doações próximas de você em tempo real.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text className="text-white text-xl font-bold text-center mb-3">
+                  Sua localização
+                </Text>
+                <Text className="text-[#A1A1AA] text-center leading-6 mb-4">
+                  Use o GPS ou digite outro endereço.
+                </Text>
+                
+                <Box className="flex-row items-center bg-black/30 rounded-2xl px-4 h-12 border border-[#27272A] mb-3">
+                  <FontAwesome5 name="map-marker-alt" size={16} color="#65A30D" />
+                  <TextInput
+                    value={locationInput}
+                    onChangeText={setLocationInput}
+                    placeholder="Ex: Centro, Fortaleza - CE"
+                    placeholderTextColor="#71717A"
+                    keyboardType="default"
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    className="flex-1 text-white ml-3 text-[16px]"
+                    style={{ fontFamily: "System" }}
+                  />
+                </Box>
 
-          <View className="bg-[#18181B] border border-[#27272A] rounded-[28px] overflow-hidden">
-            <View className="items-center pt-6">
-              <View className="bg-[#1E3A0A] w-16 h-16 rounded-full items-center justify-center mb-4">
-                <FontAwesome5
-                  name={
-                    locationModalMode === "permission"
-                      ? "map-marker-alt"
-                      : "location-arrow"
-                  }
-                  size={24}
-                  color="#84CC16"
-                />
-              </View>
-            </View>
-
-            <View className="px-6 pb-2">
-              {locationModalMode === "permission" ? (
-                <>
-                  <Text className="text-white text-xl font-bold text-center mb-3">
-                    Habilitar localização
-                  </Text>
-
-                  <Text className="text-[#A1A1AA] text-center leading-6">
-                    Precisamos da sua localização para mostrar doações próximas de
-                    você em tempo real.
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text className="text-white text-xl font-bold text-center mb-3">
-                    Sua localização
-                  </Text>
-
-                  <Text className="text-[#A1A1AA] text-center leading-6">
-                    Use o GPS ou digite outro endereço.
-                  </Text>
-
-                  <View className="flex-row items-center bg-black/30 rounded-2xl px-4 h-12 border border-[#27272A] mt-4">
-                    <FontAwesome5 name="map-marker-alt" size={16} color="#65A30D" />
-                    <TextInput
-                      value={locationInput}
-                      onChangeText={setLocationInput}
-                      placeholder="Ex: Centro, Fortaleza - CE"
-                      placeholderTextColor="#71717A"
-                      keyboardType="default"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      className="flex-1 text-white ml-3 text-[16px]"
-                      style={{ fontFamily: "System" }}
-                    />
-                  </View>
-
-                  <Pressable
-                    onPress={() => loadGpsLocation(true)}
-                    className="bg-[#1E3A0A] w-full rounded-2xl h-12 mt-4 border border-[#2B5718] items-center justify-center"
-                  >
-                    <Text className="text-[#84CC16] font-semibold">
-                      {locationLoading ? "Carregando..." : "Usar GPS"}
-                    </Text>
-                  </Pressable>
-
-                  {savedAddresses.length > 0 && (
-                    <View className="mt-4">
-                      <Text className="text-[#A1A1AA] text-sm mb-2">
-                        Endereços salvos
-                      </Text>
-                      {savedAddresses.map((address) => {
-                        const isSelected =
-                          normalizeText(address) === normalizeText(locationInput);
-                        return (
-                          <Pressable
-                            key={address}
-                            onPress={() => setLocationInput(address)}
-                            className={`rounded-2xl border px-4 py-3 mb-2 ${
-                              isSelected
-                                ? "border-[#65A30D] bg-[#1B2A12]"
-                                : "border-[#27272A] bg-[#111312]"
-                            }`}
-                          >
-                            <Text className="text-white text-sm">{address}</Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
+                <TouchableOpacity
+                  onPress={() => loadGpsLocation(true)}
+                  className="bg-[#1E3A0A] w-full rounded-2xl h-12 mb-3 border border-[#2B5718] items-center justify-center"
+                >
+                  {locationLoading ? (
+                    <ActivityIndicator color="#84CC16" size="small" />
+                  ) : (
+                    <Text className="text-[#84CC16] font-semibold">Usar GPS</Text>
                   )}
+                </TouchableOpacity>
 
-                  {locationError && (
-                    <Text className="text-[#F87171] text-center mt-3 text-sm">
-                      {locationError}
-                    </Text>
-                  )}
+                {savedAddresses.length > 0 && (
+                  <Box className="mb-3">
+                    <Text className="text-[#A1A1AA] text-sm mb-2">Endereços salvos</Text>
+                    {savedAddresses.map((address) => {
+                      const isSelected = normalizeText(address) === normalizeText(locationInput);
+                      return (
+                        <TouchableOpacity
+                          key={address}
+                          onPress={() => setLocationInput(address)}
+                          className={`rounded-2xl border px-4 py-3 mb-2 ${
+                            isSelected
+                              ? "border-[#65A30D] bg-[#1B2A12]"
+                              : "border-[#27272A] bg-[#111312]"
+                          }`}
+                        >
+                          <Text className="text-white text-sm">{address}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </Box>
+                )}
 
-                  <Pressable
-                    onPress={handleApplyLocation}
-                    className="bg-[#65A30D] w-full rounded-2xl h-12 mt-4 items-center justify-center"
-                  >
-                    <Text className="text-white font-semibold">
-                      Aplicar localização
-                    </Text>
-                  </Pressable>
-                </>
-              )}
-            </View>
-
-            <View className="flex-col pb-6 pt-4 px-6">
-              {locationModalMode === "permission" ? (
-                <>
-                  <Pressable
-                    onPress={handleEnableLocation}
-                    className="bg-[#65A30D] w-full rounded-2xl h-12 mb-3 items-center justify-center"
-                  >
-                    <Text className="text-white font-semibold">
-                      Permitir acesso
-                    </Text>
-                  </Pressable>
-
-                  <TouchableOpacity onPress={() => setLocationModalMode(null)}>
-                    <Text className="text-[#A1A1AA] text-center">Agora não</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
+                {locationError && (
+                  <Text className="text-[#F87171] text-center mb-3 text-sm">
+                    {locationError}
+                  </Text>
+                )}
+              </>
+            )}
+          </ModalBody>
+          <ModalFooter className="flex-col pb-6 pt-4">
+            {locationModalMode === "permission" ? (
+              <>
+                <Button
+                  onPress={handleEnableLocation}
+                  className="bg-[#65A30D] w-full rounded-2xl h-12 mb-3"
+                >
+                  <ButtonText className="text-white font-semibold">Permitir acesso</ButtonText>
+                </Button>
+                <TouchableOpacity onPress={() => setLocationModalMode(null)}>
+                  <Text className="text-[#A1A1AA] text-center">Agora não</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Button
+                  onPress={handleApplyLocation}
+                  className="bg-[#65A30D] w-full rounded-2xl h-12 mb-3"
+                >
+                  <ButtonText className="text-white font-semibold">Aplicar localização</ButtonText>
+                </Button>
                 <TouchableOpacity onPress={() => setLocationModalMode(null)}>
                   <Text className="text-[#A1A1AA] text-center">Cancelar</Text>
                 </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
+              </>
+            )}
+          </ModalFooter>
+        </ModalContent>
       </Modal>
     </SafeAreaView>
   );

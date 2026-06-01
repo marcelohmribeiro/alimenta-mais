@@ -1,7 +1,10 @@
+import { useUser } from "@/store";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Tabs } from "expo-router";
 
 export default function TabLayout() {
+  const isDoador = useUser((s) => s.isDoador);
+
   return (
     <Tabs
       screenOptions={{
@@ -48,7 +51,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="doar/index"
         options={{
-          href: "/(tabs)/doar",
+          href: isDoador ? "/(tabs)/doar" : null,
           title: "Doar",
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons
@@ -61,7 +64,7 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="conversas/index"
+        name="historico/index"
         options={{
           title: "Histórico",
           tabBarIcon: ({ color }) => (
@@ -77,6 +80,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="solicitacoes-recebidas/index"
         options={{
+          href: isDoador ? "/(tabs)/solicitacoes-recebidas" : null,
           title: "Solicitações",
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons
@@ -103,6 +107,14 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="home/[id]"
+        options={{
+          href: null,
+          title: "Detalhes",
+        }}
+      />
+
+      <Tabs.Screen
         name="become-donor/index"
         options={{
           href: null,
@@ -116,7 +128,6 @@ export default function TabLayout() {
           href: null,
         }}
       />
-
       <Tabs.Screen
         name="cadastrardoacoes"
         options={{
