@@ -11,6 +11,7 @@ import { UserProfile } from "@/types";
 import { formatarData, formatarHorario } from "@/utils";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -31,6 +32,36 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const fallbackImage = require("@/assets/images/pao.jpg");
 const DONATION_TERMS_KEY = "alimenta_plus_donation_terms_accepted_v1";
+const USER_COORDS_KEY = "@user_last_coords";
+
+const toRadians = (value: number) => (value * Math.PI) / 180;
+
+const calculateDistanceMeters = (
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number }
+) => {
+  const earthRadius = 6371000;
+  const dLat = toRadians(to.latitude - from.latitude);
+  const dLon = toRadians(to.longitude - from.longitude);
+  const lat1 = toRadians(from.latitude);
+  const lat2 = toRadians(to.latitude);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return earthRadius * c;
+};
+
+const formatDistance = (meters: number) => {
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+  const km = meters / 1000;
+  const precision = km < 10 ? 1 : 0;
+  return `${km.toFixed(precision)} km`;
+};
 
 const TERMO_DOACAO = `Ao solicitar esta doação, você declara que:
 
@@ -91,19 +122,50 @@ export default function DonationDetailScreen() {
   const [reivindicando, setReivindicando] = useState(false);
   const [termoModalVisible, setTermoModalVisible] = useState(false);
   const [termoAceito, setTermoAceito] = useState(false);
+  const [distanceText, setDistanceText] = useState<string | null>(null);
   const tabBarHeight = useBottomTabBarHeight();
 
   useEffect(() => {
     if (!id) return;
     startLoading();
     buscarDoacao(id)
-      .then((data) => {
+      .then(async (data) => {
         setDonation(data);
         if (data?.donorId) {
           setLoadingDonor(true);
           buscarPerfilUsuario(data.donorId)
             .then(setDonorProfile)
             .finally(() => setLoadingDonor(false));
+        }
+
+        const coordsJson = await AsyncStorage.getItem(USER_COORDS_KEY);
+        if (!coordsJson || !data) {
+          setDistanceText(null);
+          return;
+        }
+
+        const userCoords = JSON.parse(coordsJson) as { latitude: number; longitude: number };
+
+        let donationCoords: { latitude: number; longitude: number } | null = null;
+
+        if (typeof data.latitude === "number" && typeof data.longitude === "number") {
+          donationCoords = { latitude: data.latitude, longitude: data.longitude };
+        } else if (data.localizacao) {
+          try {
+            const [result] = await Location.geocodeAsync(data.localizacao);
+            if (result) {
+              donationCoords = { latitude: result.latitude, longitude: result.longitude };
+            }
+          } catch {
+            donationCoords = null;
+          }
+        }
+
+        if (donationCoords) {
+          const distance = calculateDistanceMeters(userCoords, donationCoords);
+          setDistanceText(`${formatDistance(distance)} de você`);
+        } else {
+          setDistanceText(null);
         }
       })
       .finally(stopLoading);
@@ -243,9 +305,16 @@ export default function DonationDetailScreen() {
             <Box className="bg-[#141416] rounded-2xl px-4 py-3 mb-3">
               <HStack className="flex-row items-center" style={{ gap: 10 }}>
                 <FontAwesome5 name="map-marker-alt" size={14} color="#65A30D" />
-                <Text className="text-white text-sm flex-1" numberOfLines={2}>
-                  {donation.localizacao || "Localização não informada"}
-                </Text>
+                <VStack className="flex-1">
+                  <Text className="text-white text-sm" numberOfLines={2}>
+                    {donation.localizacao || "Localização não informada"}
+                  </Text>
+                  {distanceText && (
+                    <Text className="text-[#84CC16] text-xs mt-1 font-semibold">
+                      {distanceText}
+                    </Text>
+                  )}
+                </VStack>
               </HStack>
             </Box>
 
