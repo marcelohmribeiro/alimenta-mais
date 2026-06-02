@@ -132,9 +132,6 @@ export default function DoarScreen() {
 
     try {
       setLoading(true);
-      console.log("USUARIO:", user);
-      console.log("INICIANDO SALVAMENTO");
-
       await salvarDoacao({
         userId: user?.uid ?? null,
         fotos,
@@ -150,13 +147,10 @@ export default function DoarScreen() {
         horarioFim,
         endereco,
       });
-      console.log("SALVOU COM SUCESSO");
       limparFormulario();
-
       Alert.alert("Sucesso", "Doação cadastrada com sucesso!");
     } catch (error) {
       console.log("ERRO AO CADASTRAR DOAÇÃO:", error);
-
       const mensagem =
         error instanceof FirestoreServiceError ||
         error instanceof CloudinaryServiceError

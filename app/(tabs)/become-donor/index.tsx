@@ -2,7 +2,7 @@ import { AceiteTermo } from "@/components";
 import { TERMO_DOADOR } from "@/constants";
 import useAuth from "@/hooks/_useAuth";
 import { FirestoreServiceError, salvarDoador } from "@/services";
-import { useLoading } from "@/store";
+import { useLoading, useUser } from "@/store";
 import { apenasDigitos, formatarCNPJ, validarCNPJ } from "@/utils";
 import { Ionicons } from "@expo/vector-icons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -31,6 +31,7 @@ const absoluteFill = {
 export default function BecomeDonor() {
   const { user } = useAuth();
   const { startLoading, stopLoading, loading } = useLoading();
+  const setIsDoador = useUser((s) => s.setIsDoador);
 
   const [documento, setDocumento] = useState("");
   const [endereco, setEndereco] = useState("");
@@ -75,6 +76,7 @@ export default function BecomeDonor() {
         tipoDocumento: "cnpj",
         endereco: endereco.trim(),
       });
+      setIsDoador(true);
       stopLoading();
       Alert.alert(
         "Cadastro realizado! 🎉",

@@ -254,29 +254,35 @@ export default function Home() {
     };
   }, [locationValue]);
 
-  useEffect(() => {
-    let active = true;
-
-    const loadDonations = async () => {
+  const loadDonations = React.useCallback(
+    async (isActive: () => boolean = () => true) => {
       startLoading();
       try {
         setDonationsError(null);
         const data = await listarDoacoes();
-        if (active) setDonations(data);
+        if (isActive()) setDonations(data);
       } catch (error) {
         console.error("Erro ao carregar doações:", error);
-        if (active) {
+        if (isActive()) {
           setDonationsError("Não foi possível carregar as doações.");
           setDonations([]);
         }
       } finally {
-        if (active) stopLoading();
+        if (isActive()) stopLoading();
       }
-    };
+    },
+    [startLoading, stopLoading]
+  );
 
-    loadDonations();
-    return () => { active = false; };
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      loadDonations(() => active);
+      return () => {
+        active = false;
+      };
+    }, [loadDonations])
+  );
 
   const loadGpsLocation = async (requestPermission: boolean) => {
     try {

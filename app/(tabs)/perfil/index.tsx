@@ -21,7 +21,8 @@ import {
   ref as storageRef,
   uploadBytes,
 } from "firebase/storage";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   ActivityIndicator,
   Alert,
@@ -109,62 +110,64 @@ const ProfileScreen = () => {
     return () => clearTimeout(timer);
   }, [successMessage]);
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (initializing) {
-        return;
-      }
+  const loadProfile = useCallback(async () => {
+    if (initializing) {
+      return;
+    }
 
-      if (!user) {
-        setProfile(null);
-        router.replace("/(auth)/login");
-        return;
-      }
+    if (!user) {
+      setProfile(null);
+      router.replace("/(auth)/login");
+      return;
+    }
 
-      if (!db) {
-        setError("Firebase não está configurado para carregar o perfil.");
-        return;
-      }
+    if (!db) {
+      setError("Firebase não está configurado para carregar o perfil.");
+      return;
+    }
 
-      startLoading();
-      setError(null);
-      setSyncWarning(null);
+    startLoading();
+    setError(null);
+    setSyncWarning(null);
 
-      try {
-        const userRef = doc(db, "users", user.uid);
-        const snapshot = await getDoc(userRef);
-        const fallback = buildFallbackProfile(user.displayName, user.email);
+    try {
+      const userRef = doc(db, "users", user.uid);
+      const snapshot = await getDoc(userRef);
+      const fallback = buildFallbackProfile(user.displayName, user.email);
 
-        if (!snapshot.exists()) {
-          await setDoc(userRef, fallback, { merge: true });
-          setProfile(fallback);
-          return;
-        }
-
-        const data = snapshot.data() as Partial<UserProfile>;
-        setProfile({
-          nome: data.nome?.trim() || fallback.nome,
-          email: data.email?.trim() || fallback.email,
-          telefone: data.telefone?.trim() || "",
-          fotoPerfil: data.fotoPerfil?.trim() || "",
-          tipoUsuario: data.tipoUsuario?.trim() || fallback.tipoUsuario,
-        });
-      } catch (loadError) {
-        const errorCode = getFirebaseErrorCode(loadError);
-        const fallback = buildFallbackProfile(user.displayName, user.email);
+      if (!snapshot.exists()) {
+        await setDoc(userRef, fallback, { merge: true });
         setProfile(fallback);
-        setSyncWarning(
-          errorCode === "permission-denied"
-            ? "O Firestore bloqueou a leitura do perfil deste usuário."
-            : "Alguns dados do perfil não puderam ser sincronizados agora."
-        );
-      } finally {
-        stopLoading();
+        return;
       }
-    };
 
-    loadProfile();
-  }, [initializing, reloadToken, user]);
+      const data = snapshot.data() as Partial<UserProfile>;
+      setProfile({
+        nome: data.nome?.trim() || fallback.nome,
+        email: data.email?.trim() || fallback.email,
+        telefone: data.telefone?.trim() || "",
+        fotoPerfil: data.fotoPerfil?.trim() || "",
+        tipoUsuario: data.tipoUsuario?.trim() || fallback.tipoUsuario,
+      });
+    } catch (loadError) {
+      const errorCode = getFirebaseErrorCode(loadError);
+      const fallback = buildFallbackProfile(user.displayName, user.email);
+      setProfile(fallback);
+      setSyncWarning(
+        errorCode === "permission-denied"
+          ? "O Firestore bloqueou a leitura do perfil deste usuário."
+          : "Alguns dados do perfil não puderam ser sincronizados agora."
+      );
+    } finally {
+      stopLoading();
+    }
+  }, [initializing, user, startLoading, stopLoading]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, [loadProfile, reloadToken])
+  );
 
   const getUserProfileRef = () => {
     if (!user || !db) {
