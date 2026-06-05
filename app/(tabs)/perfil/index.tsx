@@ -6,6 +6,7 @@ import { UserProfile } from "@/types";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -22,7 +23,6 @@ import {
   uploadBytes,
 } from "firebase/storage";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useFocusEffect } from "@react-navigation/native";
 import {
   ActivityIndicator,
   Alert,
@@ -360,7 +360,7 @@ const ProfileScreen = () => {
       return;
     }
 
-    router.push(route);
+    router.push(route as any);
   };
 
 
@@ -517,22 +517,27 @@ const ProfileScreen = () => {
             <Feather name="chevron-right" size={24} color="#A3A3A3" />
           </View>
 
-          {displayProfile.tipoUsuario === "Receptor" ? (
+                    {displayProfile.tipoUsuario === "Receptor" ? (
             <Pressable
-            onPress={becomeDonor}
-            className="mb-6 overflow-hidden rounded-[22px]"
-          >
-            <LinearGradient
-              colors={["#7DE11B", "#58B50B"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              className="h-[56px] items-center justify-center rounded-[22px]"
+              onPress={becomeDonor}
+              style={{ marginBottom: 24, borderRadius: 22, overflow: "hidden" }}
             >
-              <Text className="text-[16px] font-semibold text-[#081106]">
-                Tornar-se doador
-              </Text>
-            </LinearGradient>
-          </Pressable>
+              <LinearGradient
+                colors={["#7DE11B", "#58B50B"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  height: 56,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 22,
+                }}
+              >
+                <Text style={{ fontSize: 16, fontWeight: "600", color: "#081106" }}>
+                  Tornar-se doador
+                </Text>
+              </LinearGradient>
+            </Pressable>
           ) : null}
 
           <View className="mb-6 overflow-hidden rounded-[24px] border border-[#2B4F17] bg-[#101A0F] px-4 py-4">
