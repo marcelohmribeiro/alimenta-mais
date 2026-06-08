@@ -46,3 +46,5 @@ app-example
 /android
 
 .vscode/
+assets/images/*.pdf
+assets/images/DECLARACAO_PAGAMENTOS_IR
