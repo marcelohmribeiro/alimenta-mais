@@ -235,7 +235,8 @@ export default function DonationDetailScreen() {
   };
 
   const firstPhoto = donation?.fotos?.[0]?.secureUrl ?? null;
-  const canClaim = donation?.status === "disponivel";
+  const isOwnDonation = !!donation && donation.donorId === user?.uid;
+  const canClaim = donation?.status === "disponivel" && !isOwnDonation;
   const isClaimed = donation?.status === "indisponivel";
   const tipoRetiradaLabel =
     donation?.tipoRetirada === "doador" ? "Entrega pelo doador" : "Retirada pelo receptor";
@@ -419,7 +420,11 @@ export default function DonationDetailScreen() {
           </ScrollView>
 
           <Box className="px-5 pt-3" style={{ paddingBottom: tabBarHeight + 12 }}>
-            {canClaim ? (
+            {isOwnDonation ? (
+              <Box className="bg-[#27272A] rounded-2xl h-14 items-center justify-center">
+                <Text className="text-[#71717A] text-base">Sua doação</Text>
+              </Box>
+            ) : canClaim ? (
               <TouchableOpacity
                 onPress={handleReivindicarPress}
                 disabled={reivindicando || !isScheduleValid}
